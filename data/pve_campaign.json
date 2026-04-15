@@ -1,0 +1,163 @@
+{
+  "realms": [
+    {
+      "order": 1,
+      "realm": "Midgard",
+      "theme": "Human villages, mortal warriors. Tutorial realm.",
+      "boss": "Jarl Hravnkel the Proud",
+      "unlock_reward": "Berserkr's Die + 2 God Powers"
+    },
+    {
+      "order": 2,
+      "realm": "Álfheim",
+      "theme": "Light elves, bright magic.",
+      "boss": "Frey of the Golden Boar",
+      "unlock_reward": "Skjaldmær's Die + Axe-Father's Mark Rune"
+    },
+    {
+      "order": 3,
+      "realm": "Svartálfheim",
+      "theme": "Dwarven forges, crafted artifacts.",
+      "boss": "Brokkr the Smith",
+      "unlock_reward": "Gullgjafi's Die + Rune of Hoarding"
+    },
+    {
+      "order": 4,
+      "realm": "Vanaheim",
+      "theme": "Ancient magic, fertility gods.",
+      "boss": "Njörðr of the Seas",
+      "unlock_reward": "Iðavöllr's Patience Rune + Skald's Memory"
+    },
+    {
+      "order": 5,
+      "realm": "Jötunheim",
+      "theme": "Frost giants, harsh wilderness.",
+      "boss": "Thrym the Giant-King",
+      "unlock_reward": "Jötunn's Die + Jötunn's Vitality Rune"
+    },
+    {
+      "order": 6,
+      "realm": "Niflheim",
+      "theme": "Primordial ice, ancient dead.",
+      "boss": "Hraesvelg the Corpse-Eater",
+      "unlock_reward": "Stoðvar's Die + Shield-Wall Rune"
+    },
+    {
+      "order": 7,
+      "realm": "Muspelheim",
+      "theme": "Fire realm, Surtr's domain.",
+      "boss": "Sinmara of the Flame",
+      "unlock_reward": "Muspelheim cosmetics + Bloodlust Rune"
+    },
+    {
+      "order": 8,
+      "realm": "Helheim",
+      "theme": "Hel's realm, the dishonored dead.",
+      "boss": "Hel, Queen of the Damned",
+      "unlock_reward": "Hel's Embrace Rune + Gullveig's Touch"
+    },
+    {
+      "order": 9,
+      "realm": "Asgard",
+      "theme": "Gods' own realm, final challenge.",
+      "boss": "Óðinn Allfather (3-stage fight)",
+      "unlock_reward": "Legendary cosmetics + Yggdrasil's Root Rune"
+    }
+  ],
+  "node_structure": [
+    {
+      "node": "1",
+      "type": "Combat",
+      "frequency": "Always",
+      "reward": "Choose 1 of 3 rewards (rune/gear/tokens).",
+      "notes": "Opening node. Easy AI."
+    },
+    {
+      "node": "2-3",
+      "type": "Combat or Event",
+      "frequency": "Path branches",
+      "reward": "Combat: rewards. Event: narrative choice with tradeoff.",
+      "notes": "First fork in path."
+    },
+    {
+      "node": "4",
+      "type": "Elite",
+      "frequency": "Always (on elite path) or Event (other path)",
+      "reward": "Guaranteed gear piece.",
+      "notes": "Mid-realm difficulty spike."
+    },
+    {
+      "node": "5",
+      "type": "Combat or Shop",
+      "frequency": "Path branches",
+      "reward": "Shop: spend gold for specific rune/gear.",
+      "notes": "Economic decision node."
+    },
+    {
+      "node": "6",
+      "type": "Elite or Rest",
+      "frequency": "Path branches",
+      "reward": "Elite: gear. Rest: heal 50% and upgrade one owned rune for the run.",
+      "notes": "Prep for boss."
+    },
+    {
+      "node": "7",
+      "type": "Boss",
+      "frequency": "Always",
+      "reward": "Realm-specific legendary unlock.",
+      "notes": "Realm boss with unique mechanic."
+    }
+  ],
+  "ascension_levels": [
+    {
+      "level": "A1",
+      "modifier": "AI opponents have +1 HP.",
+      "impact": "Minor — extends match length slightly."
+    },
+    {
+      "level": "A2",
+      "modifier": "Elites have +2 starting tokens.",
+      "impact": "Moderate — earlier God Power threats."
+    },
+    {
+      "level": "A3",
+      "modifier": "Between-node healing reduced 50%.",
+      "impact": "Major — run attrition increases."
+    },
+    {
+      "level": "A4",
+      "modifier": "Player starts each match with -1 token.",
+      "impact": "Moderate — slows first God Power."
+    },
+    {
+      "level": "A5",
+      "modifier": "Bosses gain a second God Power slot.",
+      "impact": "Major — boss threat multiplies."
+    },
+    {
+      "level": "A6",
+      "modifier": "One random die per match is 'cursed' (worst face on first roll).",
+      "impact": "Moderate — adaptability tested."
+    },
+    {
+      "level": "A7",
+      "modifier": "Event nodes offer worse options.",
+      "impact": "Minor — build coherence harder."
+    },
+    {
+      "level": "A8",
+      "modifier": "AI plays at maximum strategic competence.",
+      "impact": "Major — no more AI mistakes."
+    },
+    {
+      "level": "A9",
+      "modifier": "All opponents gain +1 damage on all dice.",
+      "impact": "Major — pressure escalates."
+    },
+    {
+      "level": "A10",
+      "modifier": "Double-boss: fight two bosses sequentially, no heal between.",
+      "impact": "Extreme — endgame challenge."
+    }
+  ]
+}

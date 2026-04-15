@@ -1,0 +1,162 @@
+[
+  {
+    "id": "RUNE_HOARD",
+    "display_name": "Rune of Hoarding",
+    "category": "Economy",
+    "effect": "Start each match with +2 tokens.",
+    "tradeoff": "Round 1: all bordered Hand dice lose their generation effect.",
+    "unlock_source": "PvE: Svartálfheim Realm"
+  },
+  {
+    "id": "RUNE_SACRIFICE",
+    "display_name": "Blóðrún (Blood Rune)",
+    "category": "Economy",
+    "effect": "At round start, may pay 1 HP to gain 3 tokens.",
+    "tradeoff": "Optional action — but each use accelerates your own death.",
+    "unlock_source": "PvE: Jötunheim boss drop"
+  },
+  {
+    "id": "RUNE_AXE_FATHER",
+    "display_name": "Axe-Father's Mark",
+    "category": "Probability",
+    "effect": "+15% chance to roll Axe faces (PRD-implemented).",
+    "tradeoff": "-10% chance to roll Shield faces.",
+    "unlock_source": "PvE: Midgard Realm"
+  },
+  {
+    "id": "RUNE_SHIELD_WALL",
+    "display_name": "Skjaldborg (Shield-Wall)",
+    "category": "Probability",
+    "effect": "Guaranteed ≥1 Shield and ≥1 Helmet per initial roll.",
+    "tradeoff": "Cannot roll more than 3 total Axe/Arrow faces per roll.",
+    "unlock_source": "PvE: Álfheim Realm"
+  },
+  {
+    "id": "RUNE_DESPERATION",
+    "display_name": "Örvænting (Desperation)",
+    "category": "Conditional",
+    "effect": "When below 5 HP, defensive dice block +1 extra damage each.",
+    "tradeoff": "When above 10 HP, offensive dice deal -1 damage each.",
+    "unlock_source": "PvP Season 1 Silver tier"
+  },
+  {
+    "id": "RUNE_BLOODLUST",
+    "display_name": "Bloodlust",
+    "category": "Conditional",
+    "effect": "After dealing 5+ dice damage in a round, gain +2 tokens.",
+    "tradeoff": "After dealing 0 damage in a round, lose 1 token.",
+    "unlock_source": "PvE: Muspelheim Realm"
+  },
+  {
+    "id": "RUNE_STORM",
+    "display_name": "Rune of Storms",
+    "category": "Synergy",
+    "effect": "Every 3rd God Power activation deals +2 bonus damage (or +2 healing if defensive).",
+    "tradeoff": "No direct downside — but dead in matches shorter than 4 rounds.",
+    "unlock_source": "PvE: Complete any Realm at Ascension 2+"
+  },
+  {
+    "id": "RUNE_THIEVERY",
+    "display_name": "Þjófrún (Thief's Rune)",
+    "category": "Economy",
+    "effect": "Tithing Hands steal 2 tokens instead of 1.",
+    "tradeoff": "Your Gilded Hands no longer generate tokens (only steal).",
+    "unlock_source": "PvE: Niflheim Realm"
+  },
+  {
+    "id": "RUNE_GIANT",
+    "display_name": "Jötunn's Vitality",
+    "category": "Conditional",
+    "effect": "Start with +4 HP (19 total).",
+    "tradeoff": "Start with -3 tokens (minimum 0).",
+    "unlock_source": "PvE: Jötunheim Realm"
+  },
+  {
+    "id": "RUNE_FORESIGHT",
+    "display_name": "Völva's Foresight",
+    "category": "Information",
+    "effect": "See opponent's selected God Power before resolution phase.",
+    "tradeoff": "Opponent sees one of your kept dice after your final roll.",
+    "unlock_source": "PvE: Ascension 4 reward"
+  },
+  {
+    "id": "RUNE_BERSERKR",
+    "display_name": "Berserkr's Frenzy",
+    "category": "Conditional",
+    "effect": "After taking 3+ damage in a round, your next round dice damage is +1.",
+    "tradeoff": "Healing effects on you are reduced by 50%.",
+    "unlock_source": "PvP Season 1 Gold tier"
+  },
+  {
+    "id": "RUNE_PATIENCE",
+    "display_name": "Iðavöllr's Patience",
+    "category": "Conditional",
+    "effect": "Each round you don't activate a God Power, gain +1 token next round.",
+    "tradeoff": "God Powers cost +1 token for the rest of the match after first activation.",
+    "unlock_source": "PvE: Vanaheim Realm"
+  },
+  {
+    "id": "RUNE_ECHO",
+    "display_name": "Echo of Ragnarök",
+    "category": "Synergy",
+    "effect": "When reduced to ≤3 HP, all your dice rerolls become free this round.",
+    "tradeoff": "When at full HP, you start each round with 1 fewer die (5 instead of 6).",
+    "unlock_source": "PvE: Defeat any Realm at Ascension 5+"
+  },
+  {
+    "id": "RUNE_TWINS",
+    "display_name": "Twin Runes",
+    "category": "Probability",
+    "effect": "Rolling doubles (two of any face) generates +1 token.",
+    "tradeoff": "Rolling triples or higher generates 0 bonus tokens (lose the base too).",
+    "unlock_source": "PvE: Álfheim elite reward"
+  },
+  {
+    "id": "RUNE_VOLVA",
+    "display_name": "Völva's Whisper",
+    "category": "Information",
+    "effect": "See one of opponent's equipped runes at match start.",
+    "tradeoff": "Opponent sees one of yours.",
+    "unlock_source": "PvE: Muspelheim elite reward"
+  },
+  {
+    "id": "RUNE_MIDAS",
+    "display_name": "Gullveig's Touch",
+    "category": "Economy",
+    "effect": "First God Power activation per match costs -2 tokens.",
+    "tradeoff": "Last God Power activation per match costs +3 tokens.",
+    "unlock_source": "PvE: Ascension 6 reward"
+  },
+  {
+    "id": "RUNE_HEL",
+    "display_name": "Hel's Embrace",
+    "category": "Conditional",
+    "effect": "If you would die, survive at 1 HP instead (once per match).",
+    "tradeoff": "Cannot be healed above 50% of max HP for the rest of the match after trigger.",
+    "unlock_source": "PvE: Helheim boss drop"
+  },
+  {
+    "id": "RUNE_SKALD",
+    "display_name": "Skald's Memory",
+    "category": "Synergy",
+    "effect": "Second use of any God Power per match costs -2 tokens.",
+    "tradeoff": "First use costs +1 token.",
+    "unlock_source": "PvE: Vanaheim elite reward"
+  },
+  {
+    "id": "RUNE_TROLL",
+    "display_name": "Troll-Hide",
+    "category": "Conditional",
+    "effect": "Take -1 damage from all God Power effects.",
+    "tradeoff": "Take +1 damage from all dice attacks.",
+    "unlock_source": "PvE: Jötunheim Realm"
+  },
+  {
+    "id": "RUNE_YGGDRASIL",
+    "display_name": "Yggdrasil's Root",
+    "category": "Economy",
+    "effect": "At the end of each round, if you have fewer tokens than opponent, gain 1 token.",
+    "tradeoff": "At the end of each round, if you have more tokens than opponent, lose 1 token.",
+    "unlock_source": "PvE: Complete all 9 Realms"
+  }
+]

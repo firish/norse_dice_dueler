@@ -1,0 +1,72 @@
+[
+  {
+    "id": "COND_ODIN_GAZE",
+    "display_name": "Óðinn's Gaze",
+    "effect": "After the first roll, each reroll costs 1 token per die rerolled.",
+    "archetype_skew": "Favors Aggro (take what you roll). Hurts Control (relies on rerolls).",
+    "rarity": "Common"
+  },
+  {
+    "id": "COND_MIDGARD_HEARTH",
+    "display_name": "Midgard's Hearth",
+    "effect": "All healing effects are doubled.",
+    "archetype_skew": "Favors Control. Neutral for Economy. Hurts Aggro.",
+    "rarity": "Common"
+  },
+  {
+    "id": "COND_FENRIR_HUNT",
+    "display_name": "Fenrir's Hunt",
+    "effect": "The first unblocked attack die each round deals double damage.",
+    "archetype_skew": "Favors Aggro with focused dice. Neutral for others.",
+    "rarity": "Common"
+  },
+  {
+    "id": "COND_YGGDRASIL_ROOTS",
+    "display_name": "Yggdrasil's Roots",
+    "effect": "Both players start with +3 HP (18 total).",
+    "archetype_skew": "Favors Control and Combo (longer matches). Hurts Aggro.",
+    "rarity": "Common"
+  },
+  {
+    "id": "COND_RAGNAROK",
+    "display_name": "Ragnarök's Shadow",
+    "effect": "From round 4 onwards, both players lose 1 HP at end of each round.",
+    "archetype_skew": "Favors Aggro and Combo (ticking clock). Hurts Control (turtle).",
+    "rarity": "Uncommon"
+  },
+  {
+    "id": "COND_FREYA_BLESSING",
+    "display_name": "Freyja's Blessing",
+    "effect": "Tithing Hands and Gilded Hands generate/steal +1 token.",
+    "archetype_skew": "Favors Economy and Combo. Hurts strategies that ignore Hand dice.",
+    "rarity": "Common"
+  },
+  {
+    "id": "COND_TYR_ARENA",
+    "display_name": "Tyr's Arena",
+    "effect": "God Powers are disabled. Pure dice combat decides the match.",
+    "archetype_skew": "Favors Aggro (dice-focused). Hurts Combo (God Power dependent).",
+    "rarity": "Rare (5% appearance)"
+  },
+  {
+    "id": "COND_LOKI_MISCHIEF",
+    "display_name": "Loki's Mischief",
+    "effect": "At round start, one random die per player is locked and cannot be rerolled.",
+    "archetype_skew": "Favors flexible builds. Hurts Combo (rigid synergies).",
+    "rarity": "Uncommon"
+  },
+  {
+    "id": "COND_NIFLHEIM_CHILL",
+    "display_name": "Niflheim's Chill",
+    "effect": "Defensive dice (Helmets and Shields) generate +1 token each if they block an attack.",
+    "archetype_skew": "Favors Control. Neutral for Economy. Hurts pure Aggro.",
+    "rarity": "Uncommon"
+  },
+  {
+    "id": "COND_JOTUN_MIGHT",
+    "display_name": "Jötunheim's Might",
+    "effect": "All God Powers cost 2 fewer tokens (minimum 1).",
+    "archetype_skew": "Favors Combo and offensive builds. Accelerates all matches.",
+    "rarity": "Uncommon"
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "archetypes": [
+    {
+      "name": "AGGRO — Berserkr",
+      "win_condition": "End matches by round 5-6 via front-loaded dice damage + cheap offensive God Powers.",
+      "dice_loadout": "4× Berserkr's Die, 2× Gambler's Die",
+      "god_powers": "Surtr's Flame, Fenrir's Bite, Heimdallr's Watch",
+      "runes": "Axe-Father's Mark, Berserkr's Frenzy, Bloodlust",
+      "plays_against": "Beats Economy (kills before hoard pays off). Loses to Control."
+    },
+    {
+      "name": "CONTROL — Stoðvar",
+      "win_condition": "Survive to turn 8+, outlast via shields, heal, and reflects.",
+      "dice_loadout": "4× Warden's Die, 2× Huskarl's Die",
+      "god_powers": "Aegis of Baldr, Eir's Mercy, Vidar's Reflection",
+      "runes": "Shield-Wall, Jötunn's Vitality, Troll-Hide",
+      "plays_against": "Beats Aggro (walls + heal outlast rush). Loses to Economy."
+    },
+    {
+      "name": "ECONOMY — Gullgjafi",
+      "win_condition": "Hoard tokens through round 5, then drop massive T3 God Power combos.",
+      "dice_loadout": "3× Miser's Die, 2× Huskarl's Die, 1× Hunter's Die",
+      "god_powers": "Mjölnir's Wrath, Freyja's Blessing, Frigg's Veil",
+      "runes": "Rune of Hoarding, Thief's Rune, Gullveig's Touch",
+      "plays_against": "Beats Control (outscales shields). Loses to Aggro."
+    },
+    {
+      "name": "COMBO — Skaldborg",
+      "win_condition": "Build around a specific synergy (e.g., arrow-spam + Skaði's Volley + Storm Rune).",
+      "dice_loadout": "4× Hunter's Die, 2× Gambler's Die",
+      "god_powers": "Skaði's Volley, Njörðr's Tide, Óðinn's Insight",
+      "runes": "Rune of Storms, Skald's Memory, Twin Runes",
+      "plays_against": "Beats Control (pierces defenses with boosted arrows). Loses to Aggro and sometimes Economy (disrupts setup)."
+    }
+  ],
+  "target_win_rate_matrix": [
+    {
+      "archetype": "AGGRO",
+      "win_rates": {
+        "AGGRO": "50%",
+        "CONTROL": "35%",
+        "ECONOMY": "62%",
+        "COMBO": "58%",
+        "Overall": "≈51%"
+      }
+    },
+    {
+      "archetype": "CONTROL",
+      "win_rates": {
+        "AGGRO": "65%",
+        "CONTROL": "50%",
+        "ECONOMY": "38%",
+        "COMBO": "45%",
+        "Overall": "≈49%"
+      }
+    },
+    {
+      "archetype": "ECONOMY",
+      "win_rates": {
+        "AGGRO": "38%",
+        "CONTROL": "62%",
+        "ECONOMY": "50%",
+        "COMBO": "55%",
+        "Overall": "≈51%"
+      }
+    },
+    {
+      "archetype": "COMBO",
+      "win_rates": {
+        "AGGRO": "42%",
+        "CONTROL": "55%",
+        "ECONOMY": "45%",
+        "COMBO": "50%",
+        "Overall": "≈48%"
+      }
+    }
+  ]
+}

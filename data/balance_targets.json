@@ -1,0 +1,86 @@
+[
+  {
+    "metric": "Overall archetype win rate",
+    "green": "45-55%",
+    "yellow": "40-45% or 55-60%",
+    "red": "<40% or >60%",
+    "measurement": "1000 games, each archetype vs. random opponent archetype + conditions."
+  },
+  {
+    "metric": "Worst matchup win rate",
+    "green": "35-65%",
+    "yellow": "30-35% or 65-70%",
+    "red": "<30% or >70%",
+    "measurement": "5000 games of specific archetype-vs-archetype pairing."
+  },
+  {
+    "metric": "God Power usage in wins",
+    "green": "10-60%",
+    "yellow": "5-10% or 60-70%",
+    "red": "<5% or >70%",
+    "measurement": "Count how many winning matches used each power at least once."
+  },
+  {
+    "metric": "Average match length",
+    "green": "5-8 rounds",
+    "yellow": "4-5 or 8-10 rounds",
+    "red": "<4 or >10 rounds",
+    "measurement": "Mean rounds per match across 10,000 simulated matches."
+  },
+  {
+    "metric": "Close matches (winner HP ≤4)",
+    "green": "≥40%",
+    "yellow": "30-40%",
+    "red": "<30%",
+    "measurement": "Percent of matches where winner has ≤4 HP remaining."
+  },
+  {
+    "metric": "First-mover advantage",
+    "green": "48-52%",
+    "yellow": "46-48% or 52-54%",
+    "red": "<46% or >54%",
+    "measurement": "Percent of matches won by P1 with mirror loadouts."
+  },
+  {
+    "metric": "Rune pick rate (if sim allows meta evolution)",
+    "green": "Max 30%",
+    "yellow": "30-40%",
+    "red": ">40%",
+    "measurement": "Percent of simulated loadouts that include a given rune."
+  },
+  {
+    "metric": "Condition win-rate delta",
+    "green": "≤5pp",
+    "yellow": "5-10pp",
+    "red": ">10pp",
+    "measurement": "Max absolute shift in any archetype's win rate when condition is active vs. neutral."
+  },
+  {
+    "metric": "Direct damage efficiency (T3)",
+    "green": "≥2.5 tokens/dmg",
+    "yellow": "2.2-2.5",
+    "red": "<2.2",
+    "measurement": "Tokens spent ÷ damage dealt at Tier 3 for offensive God Powers."
+  },
+  {
+    "metric": "Comeback rate",
+    "green": "25-35%",
+    "yellow": "20-25% or 35-40%",
+    "red": "<20% or >40%",
+    "measurement": "Percent of games where the player behind at round 3 eventually wins."
+  },
+  {
+    "metric": "Concede/quit rate (post-launch)",
+    "green": "<8%",
+    "yellow": "8-15%",
+    "red": ">15%",
+    "measurement": "Post-launch analytics: matches abandoned mid-game."
+  },
+  {
+    "metric": "Tutorial completion rate (post-launch)",
+    "green": ">80%",
+    "yellow": "65-80%",
+    "red": "<65%",
+    "measurement": "Percent of D0 installs that finish the tutorial."
+  }
+]

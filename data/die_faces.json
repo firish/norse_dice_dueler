@@ -1,0 +1,66 @@
+[
+  {
+    "id": "FACE_AXE",
+    "display_name": "Axe",
+    "symbol": "🪓",
+    "effect": "Deal 1 melee damage. Blocked by Helmet.",
+    "power_value": 1,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_ARROW",
+    "display_name": "Arrow",
+    "symbol": "🏹",
+    "effect": "Deal 1 ranged damage. Blocked by Shield.",
+    "power_value": 1,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_HELMET",
+    "display_name": "Helmet",
+    "symbol": "⛑️",
+    "effect": "Block 1 Axe from opponent.",
+    "power_value": 1,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_SHIELD",
+    "display_name": "Shield",
+    "symbol": "🛡️",
+    "effect": "Block 1 Arrow from opponent.",
+    "power_value": 1,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_HAND",
+    "display_name": "Tithing Hand",
+    "symbol": "✋",
+    "effect": "Steal 1 token from opponent (if they have any).",
+    "power_value": 0.8,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_HAND_BORDERED",
+    "display_name": "Gilded Hand",
+    "symbol": "🤲",
+    "effect": "Generate 1 token. Also steal 1 from opponent if able.",
+    "power_value": 1.2,
+    "availability": "All dice"
+  },
+  {
+    "id": "FACE_WILD",
+    "display_name": "Rune of Choosing (Wild)",
+    "symbol": "✴️",
+    "effect": "Resolves as Axe OR Arrow, player chooses at resolution.",
+    "power_value": 1.4,
+    "availability": "Skill Tree unlock (Dice Mastery 1)"
+  },
+  {
+    "id": "FACE_RUNIC",
+    "display_name": "Rune of Plenty (Runic)",
+    "symbol": "🔆",
+    "effect": "Generate 2 tokens. No combat value.",
+    "power_value": 1.3,
+    "availability": "Skill Tree unlock (Dice Mastery 4)"
+  }
+]

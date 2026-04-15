@@ -1,0 +1,122 @@
+[
+  {
+    "id": "DIE_WARRIOR",
+    "display_name": "Huskarl's Die",
+    "role": "Balanced baseline",
+    "faces": {
+      "axe": 1,
+      "arrow": 1,
+      "helmet": 1,
+      "shield": 1,
+      "hand": 1,
+      "bordered_hand": 1
+    },
+    "power_budget": 6.0,
+    "unlock": "Starter (owned from account creation)"
+  },
+  {
+    "id": "DIE_BERSERKER",
+    "display_name": "Berserkr's Die",
+    "role": "Melee aggression",
+    "faces": {
+      "axe": 2,
+      "arrow": 1,
+      "helmet": 0,
+      "shield": 1,
+      "hand": 1,
+      "bordered_hand": 1
+    },
+    "power_budget": 6.0,
+    "unlock": "Complete Midgard Realm"
+  },
+  {
+    "id": "DIE_HUNTER",
+    "display_name": "Skjaldmær's Die",
+    "role": "Ranged + token theft",
+    "faces": {
+      "axe": 0,
+      "arrow": 2,
+      "helmet": 1,
+      "shield": 0,
+      "hand": 2,
+      "bordered_hand": 1
+    },
+    "power_budget": 5.8,
+    "unlock": "Complete Álfheim Realm"
+  },
+  {
+    "id": "DIE_WARDEN",
+    "display_name": "Stoðvar's Die",
+    "role": "Pure defense",
+    "faces": {
+      "axe": 0,
+      "arrow": 0,
+      "helmet": 2,
+      "shield": 2,
+      "hand": 1,
+      "bordered_hand": 1
+    },
+    "power_budget": 6.0,
+    "unlock": "Complete Niflheim Realm"
+  },
+  {
+    "id": "DIE_MISER",
+    "display_name": "Gullgjafi's Die",
+    "role": "Token economy engine",
+    "faces": {
+      "axe": 0,
+      "arrow": 1,
+      "helmet": 1,
+      "shield": 1,
+      "hand": 1,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.2,
+    "unlock": "Complete Svartálfheim Realm"
+  },
+  {
+    "id": "DIE_GAMBLER",
+    "display_name": "Lokason's Die",
+    "role": "All-offense, no defense",
+    "faces": {
+      "axe": 2,
+      "arrow": 2,
+      "helmet": 0,
+      "shield": 0,
+      "hand": 1,
+      "bordered_hand": 1
+    },
+    "power_budget": 6.0,
+    "unlock": "Ascension 3 reward"
+  },
+  {
+    "id": "DIE_SKALD",
+    "display_name": "Skald's Die",
+    "role": "Attrition / balanced hybrid",
+    "faces": {
+      "axe": 1,
+      "arrow": 1,
+      "helmet": 1,
+      "shield": 1,
+      "hand": 0,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.4,
+    "unlock": "Ascension 5 reward"
+  },
+  {
+    "id": "DIE_JOTUN",
+    "display_name": "Jötunn's Die",
+    "role": "Heavy hitter with openings",
+    "faces": {
+      "axe": 2,
+      "arrow": 0,
+      "helmet": 1,
+      "shield": 0,
+      "hand": 1,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.2,
+    "unlock": "Defeat Thrym (Jötunheim boss)"
+  }
+]

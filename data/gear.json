@@ -1,0 +1,107 @@
+[
+  {
+    "id": "GEAR_GUNGNIR",
+    "display_name": "Gungnir (Spear of Choice)",
+    "slot": "Weapon",
+    "effect": "First Axe or Arrow attack each round deals +1 damage.",
+    "source": "Asgard boss pool"
+  },
+  {
+    "id": "GEAR_BERSERKR_AXE",
+    "display_name": "Berserkr's Axe",
+    "slot": "Weapon",
+    "effect": "Axe faces deal +1 damage. Shield faces deal -1 (min 0).",
+    "source": "Midgard/Jötunheim drops"
+  },
+  {
+    "id": "GEAR_HUNTER_BOW",
+    "display_name": "Ylgr's Bow",
+    "slot": "Weapon",
+    "effect": "Arrow faces deal +1 damage.",
+    "source": "Álfheim drops"
+  },
+  {
+    "id": "GEAR_SURTR_BRAND",
+    "display_name": "Surtr's Brand",
+    "slot": "Weapon",
+    "effect": "Every 3rd attack this match deals +3 bonus damage.",
+    "source": "Muspelheim boss pool"
+  },
+  {
+    "id": "GEAR_SVALINN",
+    "display_name": "Svalinn (Sun Shield)",
+    "slot": "Shield",
+    "effect": "Block 1 damage from each source per round (not per attack).",
+    "source": "Niflheim boss pool"
+  },
+  {
+    "id": "GEAR_JOTUN_PLATE",
+    "display_name": "Jötunn Plate",
+    "slot": "Shield",
+    "effect": "Start each round with +2 HP temporary buffer (expires end of round).",
+    "source": "Jötunheim drops"
+  },
+  {
+    "id": "GEAR_MIRROR_SHIELD",
+    "display_name": "Mirror of Skaði",
+    "slot": "Shield",
+    "effect": "25% chance (PRD) to reflect 1 damage back per blocked attack.",
+    "source": "Vanaheim drops"
+  },
+  {
+    "id": "GEAR_HELM_OF_AWE",
+    "display_name": "Helm of Awe (Ægishjálmr)",
+    "slot": "Helm",
+    "effect": "See opponent's selected God Power before choosing yours.",
+    "source": "Helheim drops"
+  },
+  {
+    "id": "GEAR_CROWN_FROST",
+    "display_name": "Frost-Crown of Hrimthursar",
+    "slot": "Helm",
+    "effect": "+1 reroll per round.",
+    "source": "Niflheim drops"
+  },
+  {
+    "id": "GEAR_HUNTER_HOOD",
+    "display_name": "Valkyrja's Hood",
+    "slot": "Helm",
+    "effect": "After winning a round, peek at opponent's next roll.",
+    "source": "Álfheim elite drops"
+  },
+  {
+    "id": "GEAR_BRISINGAMEN",
+    "display_name": "Brísingamen (Freyja's Necklace)",
+    "slot": "Amulet",
+    "effect": "Gilded Hands generate 2 tokens instead of 1.",
+    "source": "Vanaheim boss pool"
+  },
+  {
+    "id": "GEAR_MJOLNIR_CHARM",
+    "display_name": "Mjölnir Charm",
+    "slot": "Amulet",
+    "effect": "Offensive God Powers cost -1 token (min 1).",
+    "source": "Asgard drops"
+  },
+  {
+    "id": "GEAR_RAVEN_TALON",
+    "display_name": "Raven's Talon",
+    "slot": "Amulet",
+    "effect": "Start each match with +2 tokens.",
+    "source": "Midgard elite drops"
+  },
+  {
+    "id": "GEAR_YGGDRASIL_SEED",
+    "display_name": "Seed of Yggdrasil",
+    "slot": "Amulet",
+    "effect": "Heal 1 HP at the end of each round.",
+    "source": "Vanaheim boss pool"
+  },
+  {
+    "id": "GEAR_RUNE_STONE",
+    "display_name": "Runestone of the Ancients",
+    "slot": "Amulet",
+    "effect": "Runes with conditional effects trigger 1 round earlier.",
+    "source": "Asgard elite drops"
+  }
+]

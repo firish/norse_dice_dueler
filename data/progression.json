@@ -1,0 +1,130 @@
+{
+  "Dice Mastery": [
+    {
+      "node": "1",
+      "name": "Rune of Choosing",
+      "effect": "Unlock the Wild die face in your face pool (replaces one face on chosen die).",
+      "sp_cost": 1
+    },
+    {
+      "node": "2",
+      "name": "Steady Hand",
+      "effect": "+1 reroll per round (4 total instead of 3).",
+      "sp_cost": 2
+    },
+    {
+      "node": "3",
+      "name": "Frozen Fate",
+      "effect": "Once per match, 'freeze' one die across rounds (it keeps its face).",
+      "sp_cost": 2
+    },
+    {
+      "node": "4",
+      "name": "Rune of Plenty",
+      "effect": "Unlock the Runic die face.",
+      "sp_cost": 2
+    },
+    {
+      "node": "5",
+      "name": "Thief's Trick",
+      "effect": "Once per match, swap one of your dice with one of opponent's after final roll.",
+      "sp_cost": 3
+    }
+  ],
+  "God Power Mastery": [
+    {
+      "node": "1",
+      "name": "Priestly Tithe",
+      "effect": "All God Powers cost 1 fewer token at Tier 1 only.",
+      "sp_cost": 1
+    },
+    {
+      "node": "2",
+      "name": "Patron God",
+      "effect": "Choose one God Power. Its effects are +1 at all tiers.",
+      "sp_cost": 2
+    },
+    {
+      "node": "3",
+      "name": "Blessed Ascent",
+      "effect": "Once per match, activate a God Power one tier higher than paid for.",
+      "sp_cost": 2
+    },
+    {
+      "node": "4",
+      "name": "Echo of the Gods",
+      "effect": "When your God Power is countered (Frigg's Veil), refund 25% of tokens.",
+      "sp_cost": 2
+    },
+    {
+      "node": "5",
+      "name": "Fourth Oath",
+      "effect": "Bring 4 God Powers to matches instead of 3.",
+      "sp_cost": 3
+    }
+  ],
+  "Economy": [
+    {
+      "node": "1",
+      "name": "Heavy Purse",
+      "effect": "Start each match with +1 token.",
+      "sp_cost": 1
+    },
+    {
+      "node": "2",
+      "name": "Lucky Doubles",
+      "effect": "Rolling doubles (bordered hand pair) generates +1 token.",
+      "sp_cost": 2
+    },
+    {
+      "node": "3",
+      "name": "Desperate Plea",
+      "effect": "If you end a round with 0 tokens, gain 2 at start of next round.",
+      "sp_cost": 2
+    },
+    {
+      "node": "4",
+      "name": "Master Thief",
+      "effect": "25% chance (PRD) for Tithing Hands to steal 2 tokens instead of 1.",
+      "sp_cost": 2
+    },
+    {
+      "node": "5",
+      "name": "Alchemy",
+      "effect": "Once per match, convert 5 tokens into 2 HP.",
+      "sp_cost": 3
+    }
+  ],
+  "Resilience": [
+    {
+      "node": "1",
+      "name": "Hardy Stock",
+      "effect": "Start with +1 HP (16 total in PvE).",
+      "sp_cost": 1
+    },
+    {
+      "node": "2",
+      "name": "Pain Response",
+      "effect": "When you lose 3+ HP in a round, gain 2 tokens.",
+      "sp_cost": 2
+    },
+    {
+      "node": "3",
+      "name": "Unbroken Defense",
+      "effect": "Unused defense dice (no attack to block) grant 1 token each at round end.",
+      "sp_cost": 2
+    },
+    {
+      "node": "4",
+      "name": "Absolute Barrier",
+      "effect": "Once per match, negate all damage from a resolution phase (costs all your tokens).",
+      "sp_cost": 3
+    },
+    {
+      "node": "5",
+      "name": "Second Wind",
+      "effect": "When reduced to 0 HP in PvE, survive with 1 HP (once per run).",
+      "sp_cost": 3
+    }
+  ]
+}
