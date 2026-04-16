@@ -29,6 +29,18 @@ class Agent:
         """
         raise NotImplementedError
 
-    def choose_god_power(self, state: GameState, player_num: int) -> None:
-        """Return God Power activation choice. Returns None at L0 (no powers)."""
+    def choose_god_power(
+        self, state: "GameState", player_num: int
+    ) -> tuple[str, int] | None:
+        """
+        Return a GP activation choice or None to pass.
+
+        Returns:
+            (gp_id, tier_idx) where tier_idx is 0=T1, 1=T2, 2=T3.
+            None means the player passes (no GP this round).
+
+        The engine validates the choice (loadout membership, token cost).
+        Invalid choices are treated as a pass.
+        Base class always passes - subclasses override to activate GPs.
+        """
         return None

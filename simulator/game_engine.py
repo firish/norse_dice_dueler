@@ -26,6 +26,7 @@ import numpy as np
 
 from simulator.game_state import GameEvent, GamePhase, GameState, PlayerState
 from simulator.die_types import DieType
+from simulator.god_powers import GodPower, L1_OFFENSIVE_GP_IDS, load_god_powers
 
 if TYPE_CHECKING:
     from simulator.agents import Agent
@@ -85,9 +86,11 @@ class GameEngine:
     Stateless game-rule machine (except for the RNG).
 
     Args:
-        p1_die_types: Ordered list of 6 DieType objects for player 1's loadout.
-        p2_die_types: Ordered list of 6 DieType objects for player 2's loadout.
-        rng:          numpy Generator. Pass a seeded rng for reproducibility.
+        p1_die_types:  Ordered list of 6 DieType objects for player 1's loadout.
+        p2_die_types:  Ordered list of 6 DieType objects for player 2's loadout.
+        rng:           numpy Generator. Pass a seeded rng for reproducibility.
+        p1_gp_ids:     Tuple of up to 3 GP IDs for player 1 (empty = L0, no GPs).
+        p2_gp_ids:     Tuple of up to 3 GP IDs for player 2 (empty = L0, no GPs).
     """
 
     def __init__(
@@ -95,12 +98,21 @@ class GameEngine:
         p1_die_types: list[DieType],
         p2_die_types: list[DieType],
         rng: np.random.Generator | None = None,
+        p1_gp_ids: tuple[str, ...] = (),
+        p2_gp_ids: tuple[str, ...] = (),
     ) -> None:
         assert len(p1_die_types) == NUM_DICE, f"P1 loadout must have {NUM_DICE} dice"
         assert len(p2_die_types) == NUM_DICE, f"P2 loadout must have {NUM_DICE} dice"
         self.p1_die_types = p1_die_types
         self.p2_die_types = p2_die_types
         self.rng = rng or np.random.default_rng()
+        self.p1_gp_ids = p1_gp_ids
+        self.p2_gp_ids = p2_gp_ids
+        # Load GP definitions once; empty if no GPs in either loadout.
+        if p1_gp_ids or p2_gp_ids:
+            self._god_powers = load_god_powers()
+        else:
+            self._god_powers: dict = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -108,31 +120,39 @@ class GameEngine:
 
     def new_game(self) -> GameState:
         """Return the initial GameState at the start of round 1."""
-        blank = PlayerState(
-            hp=STARTING_HP,
-            tokens=STARTING_TOKENS,
-            dice_faces=_BLANK_FACES,
-            dice_kept=_ALL_FREE,
-        )
         return GameState(
             round_num=1,
             phase=GamePhase.REVEAL,
-            p1=blank,
-            p2=blank,
+            p1=PlayerState(
+                hp=STARTING_HP,
+                tokens=STARTING_TOKENS,
+                dice_faces=_BLANK_FACES,
+                dice_kept=_ALL_FREE,
+                gp_loadout=self.p1_gp_ids,
+            ),
+            p2=PlayerState(
+                hp=STARTING_HP,
+                tokens=STARTING_TOKENS,
+                dice_faces=_BLANK_FACES,
+                dice_kept=_ALL_FREE,
+                gp_loadout=self.p2_gp_ids,
+            ),
             winner=None,
         )
 
     def step(
         self,
         state: GameState,
-        p1_action: frozenset[int] | None = None,
-        p2_action: frozenset[int] | None = None,
+        p1_action: frozenset[int] | tuple[str, int] | None = None,
+        p2_action: frozenset[int] | tuple[str, int] | None = None,
     ) -> tuple[GameState, list[GameEvent]]:
         """
         Advance the game by one phase.
 
-        Actions are only used by KEEP_1 and KEEP_2 phases (frozenset of die
-        indices to keep). All other phases ignore the action arguments.
+        p1_action / p2_action meaning depends on the current phase:
+          KEEP_1 / KEEP_2:  frozenset[int] - die indices to lock in.
+          GOD_POWER:        tuple[str, int] - (gp_id, tier_idx 0-2), or None to pass.
+          All other phases: ignored.
         """
         phase = state.phase
         if phase == GamePhase.REVEAL:
@@ -148,7 +168,7 @@ class GameEngine:
         if phase == GamePhase.REROLL_2:
             return self._phase_reroll(state, next_phase=GamePhase.GOD_POWER)
         if phase == GamePhase.GOD_POWER:
-            return self._phase_god_power(state)
+            return self._phase_god_power(state, p1_action, p2_action)  # type: ignore[arg-type]
         if phase == GamePhase.COMBAT:
             return self._phase_combat(state)
         if phase == GamePhase.GOD_RESOLVE:
@@ -178,14 +198,15 @@ class GameEngine:
             all_events.extend(evts)
 
         tick()                                              # REVEAL -> ROLL
-        tick()                                              # ROLL   -> KEEP_1
+        tick()                                              # ROLL -> KEEP_1
         tick(p1_agent.choose_keep(state, 1),                # KEEP_1 -> REROLL_1
              p2_agent.choose_keep(state, 2))
         tick()                                              # REROLL_1 -> KEEP_2
         tick(p1_agent.choose_keep(state, 1),                # KEEP_2 -> REROLL_2
              p2_agent.choose_keep(state, 2))
         tick()                                              # REROLL_2 -> GOD_POWER
-        tick()                                              # GOD_POWER -> COMBAT
+        tick(p1_agent.choose_god_power(state, 1),           # GOD_POWER -> COMBAT
+             p2_agent.choose_god_power(state, 2))
         tick()                                              # COMBAT -> GOD_RESOLVE
         tick()                                              # GOD_RESOLVE -> TOKENS
         tick()                                              # TOKENS -> END_CHECK
@@ -277,9 +298,60 @@ class GameEngine:
         )
         return new_state, []
 
-    def _phase_god_power(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no God Powers -> skip to COMBAT.
-        return replace(state, phase=GamePhase.COMBAT), []
+    def _phase_god_power(
+        self,
+        state: GameState,
+        p1_action: tuple[str, int] | None,
+        p2_action: tuple[str, int] | None,
+    ) -> tuple[GameState, list[GameEvent]]:
+        """
+        Accept GP choices from both agents, validate them, deduct token costs,
+        and write the confirmed choice into each PlayerState for GOD_RESOLVE.
+
+        Validation rules:
+          - GP must be in the player's loadout.
+          - Tier index must be 0, 1, or 2.
+          - Player must have enough tokens to pay the cost.
+        Invalid choices are silently treated as a pass (None).
+        """
+        p1 = state.p1
+        p2 = state.p2
+        events: list[GameEvent] = []
+
+        def _validate(
+            player: PlayerState,
+            action: tuple[str, int] | None,
+            player_num: int,
+        ) -> tuple[PlayerState, tuple[str, int] | None]:
+            if action is None:
+                return player, None
+            gp_id, tier_idx = action
+            if gp_id not in player.gp_loadout:
+                return player, None
+            if tier_idx not in (0, 1, 2):
+                return player, None
+            gp = self._god_powers.get(gp_id)
+            if gp is None:
+                return player, None
+            tier = gp.tiers[tier_idx]
+            if player.tokens < tier.cost:
+                return player, None
+            # Valid - deduct tokens and record choice.
+            new_player = replace(
+                player,
+                tokens=player.tokens - tier.cost,
+                gp_choice=(gp_id, tier_idx),
+            )
+            events.append(GameEvent("gp_chosen", {
+                "player": player_num, "gp_id": gp_id,
+                "tier": tier_idx, "cost": tier.cost,
+            }))
+            return new_player, (gp_id, tier_idx)
+
+        p1, _ = _validate(p1, p1_action, 1)
+        p2, _ = _validate(p2, p2_action, 2)
+
+        return replace(state, phase=GamePhase.COMBAT, p1=p1, p2=p2), events
 
     def _phase_combat(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
@@ -314,8 +386,92 @@ class GameEngine:
         ]
 
     def _phase_god_resolve(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no God Powers -> skip to TOKENS.
-        return replace(state, phase=GamePhase.TOKENS), []
+        """
+        Apply both players' chosen God Powers simultaneously (L1: offensive GPs only).
+
+        Resolution order (CLAUDE.md step 5): offensive GPs activate after combat.
+        Both players' damage is calculated first, then applied simultaneously.
+        This means Surtr self-damage and opponent damage both land at the same time.
+
+        GPs implemented at L1 (Fenrir deferred to L2):
+          GP_MJOLNIRS_WRATH  - direct damage to opponent
+          GP_SKADIS_VOLLEY   - bonus per unblocked arrow (recalculated from final dice)
+          GP_SURTRS_FLAME    - direct damage to opponent + self damage
+          GP_LOKIS_GAMBIT    - random damage in [dmg_min, dmg_max] inclusive
+        """
+        p1 = state.p1
+        p2 = state.p2
+
+        if p1.gp_choice is None and p2.gp_choice is None:
+            return replace(state, phase=GamePhase.TOKENS), []
+
+        events: list[GameEvent] = []
+
+        # Calculate all damage before applying (simultaneous resolution).
+        dmg_to_p2 = 0
+        dmg_to_p1 = 0
+        self_dmg_to_p1 = 0
+        self_dmg_to_p2 = 0
+
+        def _resolve_offensive(
+            attacker: PlayerState,
+            defender: PlayerState,
+            gp_id: str,
+            tier_idx: int,
+        ) -> tuple[int, int]:
+            """Return (damage_to_defender, self_damage_to_attacker)."""
+            gp = self._god_powers.get(gp_id)
+            if gp is None or gp_id not in L1_OFFENSIVE_GP_IDS:
+                return 0, 0
+            tier = gp.tiers[tier_idx]
+
+            if gp_id == "GP_MJOLNIRS_WRATH":
+                return int(tier.damage), 0
+
+            if gp_id == "GP_SURTRS_FLAME":
+                return int(tier.damage), tier.self_damage
+
+            if gp_id == "GP_LOKIS_GAMBIT":
+                dmg = int(self.rng.integers(tier.dmg_min, tier.dmg_max + 1))
+                return dmg, 0
+
+            if gp_id == "GP_SKADIS_VOLLEY":
+                # Bonus applies to arrows that were unblocked during combat this round.
+                # Recalculate from final dice state (dice unchanged since REROLL_2).
+                attacker_arrows = attacker.dice_faces.count("FACE_ARROW")
+                defender_shields = defender.dice_faces.count("FACE_SHIELD")
+                unblocked = max(0, attacker_arrows - defender_shields)
+                return unblocked * tier.arrow_bonus, 0
+
+            return 0, 0
+
+        if p1.gp_choice is not None:
+            gp_id, tier_idx = p1.gp_choice
+            d, sd = _resolve_offensive(p1, p2, gp_id, tier_idx)
+            dmg_to_p2 += d
+            self_dmg_to_p1 += sd
+            events.append(GameEvent("gp_resolved", {
+                "player": 1, "gp_id": gp_id, "tier": tier_idx,
+                "dmg_to_opponent": d, "self_damage": sd,
+            }))
+
+        if p2.gp_choice is not None:
+            gp_id, tier_idx = p2.gp_choice
+            d, sd = _resolve_offensive(p2, p1, gp_id, tier_idx)
+            dmg_to_p1 += d
+            self_dmg_to_p2 += sd
+            events.append(GameEvent("gp_resolved", {
+                "player": 2, "gp_id": gp_id, "tier": tier_idx,
+                "dmg_to_opponent": d, "self_damage": sd,
+            }))
+
+        new_state = replace(
+            state,
+            phase=GamePhase.TOKENS,
+            p1=replace(p1, hp=p1.hp - dmg_to_p1 - self_dmg_to_p1, gp_choice=None),
+            p2=replace(p2, hp=p2.hp - dmg_to_p2 - self_dmg_to_p2, gp_choice=None),
+        )
+        return new_state, events
 
     def _phase_tokens(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
@@ -389,7 +545,7 @@ class GameEngine:
             state,
             round_num=state.round_num + 1,
             phase=GamePhase.REVEAL,
-            p1=replace(state.p1, dice_faces=_BLANK_FACES, dice_kept=_ALL_FREE),
-            p2=replace(state.p2, dice_faces=_BLANK_FACES, dice_kept=_ALL_FREE),
+            p1=replace(state.p1, dice_faces=_BLANK_FACES, dice_kept=_ALL_FREE, gp_choice=None),
+            p2=replace(state.p2, dice_faces=_BLANK_FACES, dice_kept=_ALL_FREE, gp_choice=None),
         )
         return new_state, [GameEvent("round_end", {"round": state.round_num})]

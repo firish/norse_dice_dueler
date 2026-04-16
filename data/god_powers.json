@@ -60,19 +60,22 @@
         "tier": "T1",
         "cost": 4,
         "effect": "Your unblocked arrows this round deal +1 damage each.",
-        "damage": null
+        "damage": null,
+        "arrow_bonus": 1
       },
       {
         "tier": "T2",
         "cost": 7,
         "effect": "Your unblocked arrows this round deal +2 damage each.",
-        "damage": null
+        "damage": null,
+        "arrow_bonus": 2
       },
       {
         "tier": "T3",
         "cost": 10,
         "effect": "Your unblocked arrows this round deal +3 damage each.",
-        "damage": null
+        "damage": null,
+        "arrow_bonus": 3
       }
     ],
     "design_notes": "Synergy with Hunter's and Gambler's dice. Wasted if opponent rolls shields."
@@ -86,19 +89,22 @@
         "tier": "T1",
         "cost": 3,
         "effect": "Deal 2 damage. You take 1 damage.",
-        "damage": 2
+        "damage": 2,
+        "self_damage": 1
       },
       {
         "tier": "T2",
         "cost": 5,
         "effect": "Deal 3 damage. You take 1 damage.",
-        "damage": 3
+        "damage": 3,
+        "self_damage": 1
       },
       {
         "tier": "T3",
         "cost": 8,
         "effect": "Deal 5 damage. You take 2 damage.",
-        "damage": 5
+        "damage": 5,
+        "self_damage": 2
       }
     ],
     "design_notes": "Aggro risk/reward. Efficient but self-harming. Favors kamikaze builds."
@@ -112,19 +118,25 @@
         "tier": "T1",
         "cost": 5,
         "effect": "Deal 1d4 damage (1-4, uniform).",
-        "damage": 2.5
+        "damage": 2.5,
+        "dmg_min": 1,
+        "dmg_max": 4
       },
       {
         "tier": "T2",
         "cost": 8,
         "effect": "Deal 2d3 damage (2-6).",
-        "damage": 4
+        "damage": 4,
+        "dmg_min": 2,
+        "dmg_max": 6
       },
       {
         "tier": "T3",
         "cost": 11,
         "effect": "Deal 3d3 damage (3-8).",
-        "damage": 5.5
+        "damage": 5.5,
+        "dmg_min": 3,
+        "dmg_max": 8
       }
     ],
     "design_notes": "High variance. Average deals more than Mjölnir per token but unreliable. Gambler fantasy."

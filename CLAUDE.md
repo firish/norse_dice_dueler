@@ -298,7 +298,7 @@ No condition may shift any archetype's win rate by >10pp (Constitution C07).
 
 ## 9. Archetypes and Balance Targets
 
-### The 4 Canonical Strategies
+### The 4 Canonical Strategies (Launch)
 
 | Archetype | Win Condition | Dice | God Powers | Runes |
 |-----------|---------------|------|------------|-------|
@@ -306,6 +306,19 @@ No condition may shift any archetype's win rate by >10pp (Constitution C07).
 | **CONTROL** | Survive to round 8+, outlast | 4× Warden + 2× Huskarl | Aegis, Eir, Vidar | Shield-Wall, Giant's Vitality, Troll-Hide |
 | **ECONOMY** | Hoard tokens, drop massive T3 combos | 3× Miser + 2× Huskarl + 1× Hunter | Mjölnir, Freyja, Frigg | Hoarding, Thief's, Gullveig's |
 | **COMBO** | Build specific synergy (arrows + Skaði + Storm) | 4× Hunter + 2× Gambler | Skaði, Njörðr, Óðinn | Storm, Skald's Memory, Twins |
+
+### Post-Launch Archetypes (Quarterly Content - 2 Planned)
+
+These two archetypes are supported by content already in the launch design - no new dice or GPs required to prototype them. Candidate for first quarterly content drop (Constitution C19).
+
+Both must be validated together (C20: no mechanic ships without a hard counter in the same bundle).
+
+| Archetype | Win Condition | Key Tools | Preys On | Loses To |
+|-----------|---------------|-----------|----------|----------|
+| **DISRUPTION** | Deny opponent resources - steal tokens, cancel GPs, destabilize economy | Tithing Hand dice, Frigg's Veil, Loki's Gambit | Economy (steals hoarded tokens before T3 drop) | Aggro (can't survive early pressure) |
+| **TEMPO** | Compound small per-round advantages; outvalue passive defense | Njörðr's Tide, Bragi's Song, Heimdallr's Watch | Control (incremental gains outlast passive defense) | Combo (Combo's burst outscales incremental value) |
+
+Adding these expands the matrix from 4x4 (16 matchups) to 6x6 (36 matchups). Simulation suite scales automatically - only new ArchetypeAgent rule sets are required.
 
 ### Target Win-Rate Matrix
 
