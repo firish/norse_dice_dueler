@@ -45,10 +45,12 @@ _ALL_FREE = (False,) * NUM_DICE
 # ---------------------------------------------------------------------------
 
 def _roll_die(die: DieType, rng: np.random.Generator) -> str:
+    """Return one randomly selected face from the given die."""
     return die.faces[rng.integers(0, NUM_DICE)]
 
 
 def _roll_all(die_types: list[DieType], rng: np.random.Generator) -> tuple[str, ...]:
+    """Roll each die in the loadout once and return the resulting faces."""
     return tuple(_roll_die(d, rng) for d in die_types)
 
 
@@ -58,6 +60,7 @@ def _reroll_unkept(
     die_types: list[DieType],
     rng: np.random.Generator,
 ) -> tuple[str, ...]:
+    """Reroll only the dice not marked as kept and return the new faces."""
     new = list(faces)
     for i, (k, die) in enumerate(zip(kept, die_types)):
         if not k:
@@ -69,7 +72,7 @@ def _apply_keep(
     prev_kept: tuple[bool, ...],
     new_indices: frozenset[int],
 ) -> tuple[bool, ...]:
-    """Merge a keep-action into the existing kept mask. Kept dice cannot be un-kept."""
+    """Merge newly kept indices into the existing keep mask."""
     return tuple(prev_kept[i] or (i in new_indices) for i in range(NUM_DICE))
 
 
@@ -174,19 +177,19 @@ class GameEngine:
             state, evts = self.step(state, p1_act, p2_act)
             all_events.extend(evts)
 
-        tick()                                              # REVEAL → ROLL
-        tick()                                              # ROLL   → KEEP_1
-        tick(p1_agent.choose_keep(state, 1),               # KEEP_1 → REROLL_1
+        tick()                                              # REVEAL -> ROLL
+        tick()                                              # ROLL   -> KEEP_1
+        tick(p1_agent.choose_keep(state, 1),                # KEEP_1 -> REROLL_1
              p2_agent.choose_keep(state, 2))
-        tick()                                              # REROLL_1 → KEEP_2
-        tick(p1_agent.choose_keep(state, 1),               # KEEP_2 → REROLL_2
+        tick()                                              # REROLL_1 -> KEEP_2
+        tick(p1_agent.choose_keep(state, 1),                # KEEP_2 -> REROLL_2
              p2_agent.choose_keep(state, 2))
-        tick()                                              # REROLL_2 → GOD_POWER
-        tick()                                              # GOD_POWER → COMBAT
-        tick()                                              # COMBAT → GOD_RESOLVE
-        tick()                                              # GOD_RESOLVE → TOKENS
-        tick()                                              # TOKENS → END_CHECK
-        tick()                                              # END_CHECK → REVEAL / GAME_OVER
+        tick()                                              # REROLL_2 -> GOD_POWER
+        tick()                                              # GOD_POWER -> COMBAT
+        tick()                                              # COMBAT -> GOD_RESOLVE
+        tick()                                              # GOD_RESOLVE -> TOKENS
+        tick()                                              # TOKENS -> END_CHECK
+        tick()                                              # END_CHECK -> REVEAL / GAME_OVER
 
         return state, all_events
 
@@ -224,7 +227,7 @@ class GameEngine:
     # ------------------------------------------------------------------
 
     def _phase_reveal(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no battlefield conditions → immediate pass-through to ROLL.
+        # L0: no battlefield conditions -> immediate pass-through to ROLL.
         return replace(state, phase=GamePhase.ROLL), []
 
     def _phase_roll(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
@@ -275,7 +278,7 @@ class GameEngine:
         return new_state, []
 
     def _phase_god_power(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no God Powers → skip to COMBAT.
+        # L0: no God Powers -> skip to COMBAT.
         return replace(state, phase=GamePhase.COMBAT), []
 
     def _phase_combat(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
@@ -311,7 +314,7 @@ class GameEngine:
         ]
 
     def _phase_god_resolve(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no God Powers → skip to TOKENS.
+        # L0: no God Powers -> skip to TOKENS.
         return replace(state, phase=GamePhase.TOKENS), []
 
     def _phase_tokens(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
@@ -357,7 +360,7 @@ class GameEngine:
     def _phase_end_check(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
         Win condition: player(s) at or below 0 HP lose.
-        Both dropping simultaneously → draw (winner = 0).
+        Both dropping simultaneously -> draw (winner = 0).
         """
         p1_dead = state.p1.hp <= 0
         p2_dead = state.p2.hp <= 0
@@ -381,7 +384,7 @@ class GameEngine:
                 })
             ]
 
-        # No winner yet — start next round.
+        # No winner yet - start next round.
         new_state = replace(
             state,
             round_num=state.round_num + 1,

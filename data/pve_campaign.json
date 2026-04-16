@@ -112,52 +112,52 @@
     {
       "level": "A1",
       "modifier": "AI opponents have +1 HP.",
-      "impact": "Minor — extends match length slightly."
+      "impact": "Minor - extends match length slightly."
     },
     {
       "level": "A2",
       "modifier": "Elites have +2 starting tokens.",
-      "impact": "Moderate — earlier God Power threats."
+      "impact": "Moderate - earlier God Power threats."
     },
     {
       "level": "A3",
       "modifier": "Between-node healing reduced 50%.",
-      "impact": "Major — run attrition increases."
+      "impact": "Major - run attrition increases."
     },
     {
       "level": "A4",
       "modifier": "Player starts each match with -1 token.",
-      "impact": "Moderate — slows first God Power."
+      "impact": "Moderate - slows first God Power."
     },
     {
       "level": "A5",
       "modifier": "Bosses gain a second God Power slot.",
-      "impact": "Major — boss threat multiplies."
+      "impact": "Major - boss threat multiplies."
     },
     {
       "level": "A6",
       "modifier": "One random die per match is 'cursed' (worst face on first roll).",
-      "impact": "Moderate — adaptability tested."
+      "impact": "Moderate - adaptability tested."
     },
     {
       "level": "A7",
       "modifier": "Event nodes offer worse options.",
-      "impact": "Minor — build coherence harder."
+      "impact": "Minor - build coherence harder."
     },
     {
       "level": "A8",
       "modifier": "AI plays at maximum strategic competence.",
-      "impact": "Major — no more AI mistakes."
+      "impact": "Major - no more AI mistakes."
     },
     {
       "level": "A9",
       "modifier": "All opponents gain +1 damage on all dice.",
-      "impact": "Major — pressure escalates."
+      "impact": "Major - pressure escalates."
     },
     {
       "level": "A10",
       "modifier": "Double-boss: fight two bosses sequentially, no heal between.",
-      "impact": "Extreme — endgame challenge."
+      "impact": "Extreme - endgame challenge."
     }
   ]
 }

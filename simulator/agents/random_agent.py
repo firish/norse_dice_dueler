@@ -1,7 +1,7 @@
 """
 random_agent.py
 ---------------
-RandomAgent — the L0 baseline agent.
+RandomAgent - the L0 baseline agent.
 
 Makes every decision by sampling uniformly at random:
   - Keep phase: each unkept die kept independently with 50% probability.
@@ -20,6 +20,15 @@ from simulator.game_state import GameState
 
 
 class RandomAgent(Agent):
+    """Agent that makes every decision uniformly at random.
+
+    Used as the L0 baseline. Two RandomAgents on mirror loadouts should
+    produce a P1 win rate of 48-52% - the first-mover symmetry check.
+
+    Args:
+        rng: optional NumPy random generator. Pass a seeded generator for
+             reproducible results (e.g. np.random.default_rng(42)).
+    """
     def __init__(self, rng: np.random.Generator | None = None) -> None:
         self.rng = rng or np.random.default_rng()
 

@@ -17,7 +17,7 @@ Usage:
 Adding a new sheet:
     1. Write a parse_<snake_case_sheet_name>(ws) function below.
     2. Add an entry to SHEET_EXPORTERS: {"Sheet Name": (parse_fn, "output_filename.json")}.
-    3. Run the script — the new file appears in /data/.
+    3. Run the script - the new file appears in /data/.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def _find_xlsx() -> pathlib.Path:
     if not matches:
         sys.exit(f"[error] No workbook matching '{_DEFAULT_XLSX_GLOB}' found in {REPO_ROOT}")
     if len(matches) > 1:
-        print(f"[warn] Multiple workbooks found — using newest: {matches[-1].name}")
+        print(f"[warn] Multiple workbooks found - using newest: {matches[-1].name}")
     return matches[-1]
 
 
@@ -176,7 +176,7 @@ def parse_god_powers(ws) -> list[dict]:
         damage: int | float | None = None
         if isinstance(raw_dmg, (int, float)):
             damage = raw_dmg
-        elif isinstance(raw_dmg, str) and raw_dmg not in ("—", "-", ""):
+        elif isinstance(raw_dmg, str) and raw_dmg not in ("-", "-", ""):
             try:
                 damage = float(raw_dmg)
             except ValueError:
@@ -244,14 +244,14 @@ def parse_archetypes(ws) -> dict:
             "plays_against": _clean(row[5]),
         })
 
-    # Win-rate matrix — find the block starting with "vs →"
+    # Win-rate matrix - find the block starting with "vs ->"
     matrix_rows = []
     in_matrix = False
     row_labels = []
     col_labels = []
     for row in ws.iter_rows(values_only=True):
         first = _clean(row[0])
-        if first == "vs →":
+        if first == "vs ->":
             in_matrix = True
             col_labels = [_clean(c) for c in row[1:] if _clean(c)]
             continue
@@ -413,7 +413,7 @@ def export_sheets(xlsx_path: pathlib.Path, sheet_names: list[str] | None = None)
 
     for sheet_name in targets:
         if sheet_name not in SHEET_EXPORTERS:
-            print(f"[skip] '{sheet_name}' not in SHEET_EXPORTERS — no parser registered")
+            print(f"[skip] '{sheet_name}' not in SHEET_EXPORTERS - no parser registered")
             continue
         if sheet_name not in wb.sheetnames:
             print(f"[skip] '{sheet_name}' not found in workbook")
@@ -425,7 +425,7 @@ def export_sheets(xlsx_path: pathlib.Path, sheet_names: list[str] | None = None)
         out_path = DATA_DIR / filename
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        print(f"[ok]   {sheet_name:30s} → data/{filename}")
+        print(f"[ok]   {sheet_name:30s} -> data/{filename}")
 
 
 # ---------------------------------------------------------------------------

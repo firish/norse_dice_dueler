@@ -153,7 +153,7 @@
         "damage": null
       }
     ],
-    "design_notes": "Hard counter to direct damage. Priced at equal efficiency to Mjölnir — mindgame city."
+    "design_notes": "Hard counter to direct damage. Priced at equal efficiency to Mjölnir - mindgame city."
   },
   {
     "id": "GP_EIRS_MERCY",
@@ -179,7 +179,7 @@
         "damage": null
       }
     ],
-    "design_notes": "Reactive — costed higher than damage because healing is guaranteed value."
+    "design_notes": "Reactive - costed higher than damage because healing is guaranteed value."
   },
   {
     "id": "GP_VIDARS_REFLECTION",
@@ -283,7 +283,7 @@
         "damage": null
       }
     ],
-    "design_notes": "Information play. High skill ceiling — useless if you can't act on info."
+    "design_notes": "Information play. High skill ceiling - useless if you can't act on info."
   },
   {
     "id": "GP_NJORDS_TIDE",
@@ -335,7 +335,7 @@
         "damage": null
       }
     ],
-    "design_notes": "Setup ability. Next-round value — commits you to a longer plan."
+    "design_notes": "Setup ability. Next-round value - commits you to a longer plan."
   },
   {
     "id": "GP_TYRS_JUDGMENT",

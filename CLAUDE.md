@@ -1,4 +1,7 @@
-# CLAUDE.md — Fjöld Project Brief
+# CLAUDE.md - Fjöld Project Brief
+
+@claude/CLAUDE_STYLE.md
+@claude/FRAMEWORK_PLAN.md
 
 > **This file is the single source of truth for AI-assisted development on this project.**
 > It captures every design decision, rule, and constraint agreed upon during the design phase.
@@ -11,7 +14,7 @@
 ## 1. Project Overview
 
 **Fjöld** (Old Norse for "multitude/many") is a mobile dice-dueling game inspired by Orlog
-from Assassin's Creed Valhalla. It is a **spiritual successor**, not a clone — original art,
+from Assassin's Creed Valhalla. It is a **spiritual successor**, not a clone - original art,
 original names, original God Powers, Norse mythology theme, no AC Valhalla IP.
 
 ### Why This Game Exists
@@ -24,10 +27,10 @@ original names, original God Powers, Norse mythology theme, no AC Valhalla IP.
 ### What We're Building
 
 A F2P mobile dice dueling game with:
-- **Hybrid PvE → PvP** game mode (PvE campaign onboards players; PvP endgame retains them).
+- **Hybrid PvE -> PvP** game mode (PvE campaign onboards players; PvP endgame retains them).
 - **Roguelike PvE campaign** ("Realms of Yggdrasil") structured like Slay the Spire.
 - **Async PvP** (take your turn, opponent gets a push notification).
-- **Cosmetics + battle pass monetization** — no pay-to-win, ever.
+- **Cosmetics + battle pass monetization** - no pay-to-win, ever.
 
 ### Team
 
@@ -41,9 +44,9 @@ A F2P mobile dice dueling game with:
 - **Game mechanics cannot be copyrighted** (U.S. Copyright Office, American Bar Association confirm).
 - What IS copyrightable: names, art, characters, code, music.
 - **Never use:** the name "Orlog", any AC Valhalla assets, character names from AC, direct visual references.
-- **Safe to use:** the core dice-combat mechanic, token economy, God Power activation system — all genericized.
+- **Safe to use:** the core dice-combat mechanic, token economy, God Power activation system - all genericized.
 - "Orlog" is Old Norse for "fate" and is not trademarked by Ubisoft, but avoid it anyway to prevent confusion.
-- Ubisoft filed an infringement lawsuit in March 2025 — they actively enforce IP. Stay clean.
+- Ubisoft filed an infringement lawsuit in March 2025 - they actively enforce IP. Stay clean.
 - **Conduct a trademark search** on the final game name before committing.
 
 ---
@@ -55,7 +58,7 @@ A F2P mobile dice dueling game with:
 | **Game Engine** | Unity (2022 LTS+) | ~70% of top mobile games, mature mobile optimization, built-in IAP/Ads/Analytics, massive Asset Store, free until $200K revenue. |
 | **Language (Client)** | C# | Unity's native language. GameCore logic is pure C# with no Unity dependencies. |
 | **Language (Simulator)** | Python 3.11+ | NumPy/Pandas/Matplotlib for analysis, Jupyter notebooks for iteration, 10,000 games/min achievable. |
-| **Backend** | Firebase | Firestore (game state), Cloud Functions (server-authoritative dice rolls), Auth (anonymous → linked), Cloud Messaging (push notifications), Remote Config (live balance tuning). Free tier handles 50K DAU. |
+| **Backend** | Firebase | Firestore (game state), Cloud Functions (server-authoritative dice rolls), Auth (anonymous -> linked), Cloud Messaging (push notifications), Remote Config (live balance tuning). Free tier handles 50K DAU. |
 | **Multiplayer** | Async (Firebase) | Dramatically simpler than real-time. Store game state in Firestore, push notifications for "your turn." Real-time PvP deferred to v2. |
 | **Version Control** | GitHub | Free private repos. Use Git LFS for Unity assets. |
 | **Art (Prototype)** | Midjourney/Stable Diffusion | AI-generated Norse art for soft launch. Commission real art post-validation. |
@@ -66,7 +69,7 @@ A F2P mobile dice dueling game with:
 
 - **Server-authoritative dice rolls** in all PvP modes. Client never generates random numbers for multiplayer. Firebase Cloud Functions handle all RNG. This is the primary anti-cheat measure.
 - **Anonymous authentication first.** Players start playing instantly. Link to Apple ID/Google later. Removes sign-up drop-off.
-- **GameCore is engine-agnostic.** Pure C# logic with no MonoBehaviour dependencies. Same code runs headless (simulation/server) or with UI (Unity client). Pattern: `GameState + Action → GameRules.apply() → (NewGameState, [Events])`.
+- **GameCore is engine-agnostic.** Pure C# logic with no MonoBehaviour dependencies. Same code runs headless (simulation/server) or with UI (Unity client). Pattern: `GameState + Action -> GameRules.apply() -> (NewGameState, [Events])`.
 - **Pseudo-Random Distribution (PRD)** for all probability-based effects. Never pure random. Dota 2's proven approach: stated probability is the long-run average, but actual per-trial probability starts low and increases until proc, then resets. Eliminates frustrating droughts.
 - **Remote Config for live balance tuning.** God Power costs, Rune effects, Condition parameters can be changed server-side without an app update. Critical for post-launch balancing.
 
@@ -108,7 +111,7 @@ These rules exist because violating them historically breaks dueling games.
 ### Process Rules
 
 - **C17:** No balance number ships without having run through the Python simulator first.
-- **C18:** If a simulated metric goes red, either the number changes or the feature is cut — never shipped "we'll see."
+- **C18:** If a simulated metric goes red, either the number changes or the feature is cut - never shipped "we'll see."
 - **C19:** Core content added quarterly, seasonal conditions monthly, cosmetics weekly.
 - **C20:** No mechanic is shipped without at least one hard counter in the same content bundle.
 
@@ -132,17 +135,17 @@ These rules exist because violating them historically breaks dueling games.
 ### Round Structure (11 Phases)
 
 ```
-1. REVEAL      → Battlefield Conditions check. Round 1: reveal primary. Round 3: reveal secondary. Fury check.
-2. ROLL        → Both players roll 6 loadout dice simultaneously. PRD-adjusted by runes/skill tree.
-3. KEEP_1      → Players simultaneously select dice to keep. Unkept dice will be rerolled.
-4. REROLL_1    → Unkept dice rerolled.
-5. KEEP_2      → Players select additional dice to keep.
-6. REROLL_2    → Final reroll. All dice are now final.
-7. GOD_POWER   → Both secretly choose 0 or 1 God Power and tier (if affordable).
-8. COMBAT      → Attack dice resolve vs. defense dice (axes vs helmets, arrows vs shields).
-9. GOD_RESOLVE → God Powers activate in priority order. Tokens deducted.
-10. TOKENS     → Bordered Hands generate tokens. Plain Hands steal from opponent. Rune triggers fire.
-11. END_CHECK  → Win condition check. If nobody at 0 HP, increment round → Phase 1.
+1. REVEAL      -> Battlefield Conditions check. Round 1: reveal primary. Round 3: reveal secondary. Fury check.
+2. ROLL        -> Both players roll 6 loadout dice simultaneously. PRD-adjusted by runes/skill tree.
+3. KEEP_1      -> Players simultaneously select dice to keep. Unkept dice will be rerolled.
+4. REROLL_1    -> Unkept dice rerolled.
+5. KEEP_2      -> Players select additional dice to keep.
+6. REROLL_2    -> Final reroll. All dice are now final.
+7. GOD_POWER   -> Both secretly choose 0 or 1 God Power and tier (if affordable).
+8. COMBAT      -> Attack dice resolve vs. defense dice (axes vs helmets, arrows vs shields).
+9. GOD_RESOLVE -> God Powers activate in priority order. Tokens deducted.
+10. TOKENS     -> Bordered Hands generate tokens. Plain Hands steal from opponent. Rune triggers fire.
+11. END_CHECK  -> Win condition check. If nobody at 0 HP, increment round -> Phase 1.
 ```
 
 ### Resolution Order (strict precedence within Phase 8-10)
@@ -176,7 +179,7 @@ These rules exist because violating them historically breaks dueling games.
 ### Power Budget Formula
 
 Every die has 6 faces. The sum of face power values must equal **6.0 ± 0.2**.
-This is Constitution C04 — enforced by formula in the spreadsheet, validated by the simulator.
+This is Constitution C04 - enforced by formula in the spreadsheet, validated by the simulator.
 
 ```
 Power Budget = (Axes × 1.0) + (Arrows × 1.0) + (Helmets × 1.0) + (Shields × 1.0) + (Hands × 0.8) + (Bordered × 1.2)
@@ -256,11 +259,11 @@ See `/data/runes.json` for full list.
 
 ### Categories
 
-- **Economy** (6): Token manipulation — Hoarding, Blood Rune, Thief's Rune, Gullveig's Touch, Skald's Memory, Yggdrasil's Root
-- **Probability** (2): Dice roll modifiers — Axe-Father's Mark (+15% axe, -10% shield), Shield-Wall (guaranteed defense, capped offense)
-- **Conditional** (7): Trigger under specific conditions — Desperation, Bloodlust, Giant's Vitality, Berserkr's Frenzy, Patience, Echo of Ragnarök, Troll-Hide
-- **Synergy** (3): Build around combos — Storm (3rd GP activation bonus), Twins (doubles bonus), Hel's Embrace (survive lethal once)
-- **Information** (2): Knowledge advantage — Foresight (see opponent GP), Völva's Whisper (see opponent rune)
+- **Economy** (6): Token manipulation - Hoarding, Blood Rune, Thief's Rune, Gullveig's Touch, Skald's Memory, Yggdrasil's Root
+- **Probability** (2): Dice roll modifiers - Axe-Father's Mark (+15% axe, -10% shield), Shield-Wall (guaranteed defense, capped offense)
+- **Conditional** (7): Trigger under specific conditions - Desperation, Bloodlust, Giant's Vitality, Berserkr's Frenzy, Patience, Echo of Ragnarök, Troll-Hide
+- **Synergy** (3): Build around combos - Storm (3rd GP activation bonus), Twins (doubles bonus), Hel's Embrace (survive lethal once)
+- **Information** (2): Knowledge advantage - Foresight (see opponent GP), Völva's Whisper (see opponent rune)
 
 ### PRD Implementation for Probability Runes
 
@@ -351,11 +354,11 @@ COMBO      42%     55%       45%      50%
 
 ---
 
-## 11. PvE Campaign — Realms of Yggdrasil
+## 11. PvE Campaign - Realms of Yggdrasil
 
 ### Structure
 
-- **9 Realms** (Midgard → Álfheim → Svartálfheim → Vanaheim → Jötunheim → Niflheim → Muspelheim → Helheim → Asgard).
+- **9 Realms** (Midgard -> Álfheim -> Svartálfheim -> Vanaheim -> Jötunheim -> Niflheim -> Muspelheim -> Helheim -> Asgard).
 - Each Realm = **7 nodes** on a branching path (4 combat, 1 elite, 1 event, 1 boss).
 - A single match takes 3-5 minutes. A full run takes 25-40 minutes.
 - Between matches: choose 1 of 3 rewards (new rune for this run, temporary GP upgrade, health restore, bonus tokens).
@@ -389,7 +392,7 @@ COMBO      42%     55%       45%      50%
 
 ---
 
-## 12. Progression — Skill Tree
+## 12. Progression - Skill Tree
 
 - **4 branches × 5 nodes = 20 total nodes.**
 - Skill Points earned per account level (~1 per 3 PvE wins).
@@ -426,9 +429,9 @@ Full details: `/data/progression.json` and Progression tab in spreadsheet.
 
 ### Currencies (max 3)
 
-1. **Gold** 🪙 — soft currency, earned through gameplay, spent on cosmetics and respec.
-2. **Runestones** 💎 — premium hard currency, earned slowly free or purchased.
-3. **Skill Points** ⭐ — progression currency, earned per account level.
+1. **Gold** 🪙 - soft currency, earned through gameplay, spent on cosmetics and respec.
+2. **Runestones** 💎 - premium hard currency, earned slowly free or purchased.
+3. **Skill Points** ⭐ - progression currency, earned per account level.
 
 ### Phased Rollout
 
@@ -438,7 +441,7 @@ Full details: `/data/progression.json` and Progression tab in spreadsheet.
 
 ---
 
-## 14. Simulation Methodology — Incremental Layered Validation
+## 14. Simulation Methodology - Incremental Layered Validation
 
 ### Core Principle
 
@@ -447,21 +450,21 @@ Full details: `/data/progression.json` and Progression tab in spreadsheet.
 ### Layer Sequence
 
 ```
-L0: Raw Dice Math       → 6× Huskarl, no GP, Random vs Random. P1 48-52%.
-L1: Offensive GP Only   → Add 5 offense powers. Greedy beats Random 60-70%.
-L2: Full GP Pool        → All 16 powers. 4 Archetypes. R-P-S matrix validates.
-L3: Dice Pool           → 8 dice types. Canonical loadouts. No die >50% of wins.
-L4: Battlefield Conditions → 10 conditions, tested individually then in pairs. No >10pp shift.
-L5: Runes               → 20 runes. Meta evolution sim. No rune >40% pick rate.
-L6: Fury Tokens          → Comeback mechanics. Comeback rate 25-35%.
-L7: PvE Campaign        → Gear + Skill Tree + AI. Separate simulation track.
+L0: Raw Dice Math       -> 6× Huskarl, no GP, Random vs Random. P1 48-52%.
+L1: Offensive GP Only   -> Add 5 offense powers. Greedy beats Random 60-70%.
+L2: Full GP Pool        -> All 16 powers. 4 Archetypes. R-P-S matrix validates.
+L3: Dice Pool           -> 8 dice types. Canonical loadouts. No die >50% of wins.
+L4: Battlefield Conditions -> 10 conditions, tested individually then in pairs. No >10pp shift.
+L5: Runes               -> 20 runes. Meta evolution sim. No rune >40% pick rate.
+L6: Fury Tokens          -> Comeback mechanics. Comeback rate 25-35%.
+L7: PvE Campaign        -> Gear + Skill Tree + AI. Separate simulation track.
 ```
 
 ### Regression Rules
 
 - When adding Layer N, re-run ALL tests from Layers 0 through N-1.
-- If previous layer turns yellow → investigate interaction before proceeding.
-- If previous layer turns RED → revert new layer and fix before re-adding.
+- If previous layer turns yellow -> investigate interaction before proceeding.
+- If previous layer turns RED -> revert new layer and fix before re-adding.
 - Never tune a lower layer to fix a higher layer's problem.
 - Store outputs as versioned JSON (e.g., `balance_L3_v1.2.json`).
 - After ANY number change in spreadsheet, re-run from lowest affected layer upward.
@@ -481,14 +484,14 @@ L7: PvE Campaign        → Gear + Skill Tree + AI. Separate simulation track.
 
 ---
 
-## 15. Architecture — Code Structure
+## 15. Architecture - Code Structure
 
 ### Simulator (Python)
 
 ```
 /simulator
 ├── game_state.py       # Immutable GameState dataclass
-├── game_engine.py      # GameEngine: apply_action(state, action) → (new_state, events)
+├── game_engine.py      # GameEngine: apply_action(state, action) -> (new_state, events)
 ├── die_types.py        # DieType definitions, face distributions
 ├── god_powers.py       # GodPower definitions, tier costs/effects
 ├── runes.py            # Rune definitions, triggers
@@ -530,12 +533,12 @@ L7: PvE Campaign        → Gear + Skill Tree + AI. Separate simulation track.
 ### Key Architecture Rule
 
 `GameCore` is **engine-agnostic**. No MonoBehaviour, no UnityEngine imports.
-The pattern: `GameState + Action → GameEngine.Apply() → (NewGameState, List<GameEvent>)`.
+The pattern: `GameState + Action -> GameEngine.Apply() -> (NewGameState, List<GameEvent>)`.
 Same logic runs headless (Python sim, C# Cloud Functions) or with UI (Unity).
 
 ### Parity Tests
 
-After porting Python → C#, maintain a suite of 50 canonical game states with expected outcomes.
+After porting Python -> C#, maintain a suite of 50 canonical game states with expected outcomes.
 Run in both Python and C# after every change. If they diverge, one has a bug.
 
 ---
@@ -565,7 +568,7 @@ Run in both Python and C# after every change. If they diverge, one has a bug.
 | Certain God Favors useless | Simulator ensures no GP <10% usage (C06) |
 | Limited replayability | Battlefield Conditions (match variance), Runes (build variety), Roguelike PvE |
 | Inverted difficulty curve | Ascending AI difficulty across 9 Realms × 10 Ascensions |
-| Physical board game: unreadable tokens | Digital solves this by default — tooltips, previews, animations |
+| Physical board game: unreadable tokens | Digital solves this by default - tooltips, previews, animations |
 | Game feels decided after round 1 | Fury Tokens + comeback mechanics; target comeback rate 25-35% |
 
 ---
@@ -575,10 +578,10 @@ Run in both Python and C# after every change. If they diverge, one has a bug.
 ### When writing simulator code:
 
 - Use Python 3.11+ with type hints everywhere.
-- GameState must be immutable — every action returns a new state.
+- GameState must be immutable - every action returns a new state.
 - Use `@dataclass(frozen=True)` for GameState.
 - Use NumPy for dice rolling in bulk simulation (vectorize when possible).
-- All balance numbers come from JSON files in `/data/` — never hardcode.
+- All balance numbers come from JSON files in `/data/` - never hardcode.
 - Every mechanic needs a unit test. Use pytest.
 - Print simulation results as formatted tables, not raw dicts.
 
@@ -612,16 +615,16 @@ Run in both Python and C# after every change. If they diverge, one has a bug.
 The master spreadsheet is `/data/Fjold_Master_Design_v1.0.xlsx`.
 Export the following tabs as JSON for the simulator and Unity client:
 
-- `/data/dice_types.json` — from "Dice Types" tab
-- `/data/die_faces.json` — from "Die Faces" tab
-- `/data/god_powers.json` — from "God Powers" tab
-- `/data/runes.json` — from "Runes" tab
-- `/data/conditions.json` — from "Battlefield Conditions" tab
-- `/data/gear.json` — from "Gear" tab
-- `/data/progression.json` — from "Progression" tab
-- `/data/archetypes.json` — from "Archetypes" tab
-- `/data/balance_targets.json` — from "Balance Targets" tab
-- `/data/pve_campaign.json` — from "PvE Campaign" tab
+- `/data/dice_types.json` - from "Dice Types" tab
+- `/data/die_faces.json` - from "Die Faces" tab
+- `/data/god_powers.json` - from "God Powers" tab
+- `/data/runes.json` - from "Runes" tab
+- `/data/conditions.json` - from "Battlefield Conditions" tab
+- `/data/gear.json` - from "Gear" tab
+- `/data/progression.json` - from "Progression" tab
+- `/data/archetypes.json` - from "Archetypes" tab
+- `/data/balance_targets.json` - from "Balance Targets" tab
+- `/data/pve_campaign.json` - from "PvE Campaign" tab
 
 ### First Task for Claude Code
 

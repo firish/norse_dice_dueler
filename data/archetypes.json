@@ -1,7 +1,7 @@
 {
   "archetypes": [
     {
-      "name": "AGGRO — Berserkr",
+      "name": "AGGRO - Berserkr",
       "win_condition": "End matches by round 5-6 via front-loaded dice damage + cheap offensive God Powers.",
       "dice_loadout": "4× Berserkr's Die, 2× Gambler's Die",
       "god_powers": "Surtr's Flame, Fenrir's Bite, Heimdallr's Watch",
@@ -9,7 +9,7 @@
       "plays_against": "Beats Economy (kills before hoard pays off). Loses to Control."
     },
     {
-      "name": "CONTROL — Stoðvar",
+      "name": "CONTROL - Stoðvar",
       "win_condition": "Survive to turn 8+, outlast via shields, heal, and reflects.",
       "dice_loadout": "4× Warden's Die, 2× Huskarl's Die",
       "god_powers": "Aegis of Baldr, Eir's Mercy, Vidar's Reflection",
@@ -17,7 +17,7 @@
       "plays_against": "Beats Aggro (walls + heal outlast rush). Loses to Economy."
     },
     {
-      "name": "ECONOMY — Gullgjafi",
+      "name": "ECONOMY - Gullgjafi",
       "win_condition": "Hoard tokens through round 5, then drop massive T3 God Power combos.",
       "dice_loadout": "3× Miser's Die, 2× Huskarl's Die, 1× Hunter's Die",
       "god_powers": "Mjölnir's Wrath, Freyja's Blessing, Frigg's Veil",
@@ -25,7 +25,7 @@
       "plays_against": "Beats Control (outscales shields). Loses to Aggro."
     },
     {
-      "name": "COMBO — Skaldborg",
+      "name": "COMBO - Skaldborg",
       "win_condition": "Build around a specific synergy (e.g., arrow-spam + Skaði's Volley + Storm Rune).",
       "dice_loadout": "4× Hunter's Die, 2× Gambler's Die",
       "god_powers": "Skaði's Volley, Njörðr's Tide, Óðinn's Insight",

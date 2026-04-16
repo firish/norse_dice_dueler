@@ -1,1 +1,6 @@
-.claude
+# Claude settings
+.claude/settings.json
+.claude/settings.local.json
+
+# Cache
+*__pycache__

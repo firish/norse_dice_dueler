@@ -12,7 +12,7 @@
     "display_name": "Blóðrún (Blood Rune)",
     "category": "Economy",
     "effect": "At round start, may pay 1 HP to gain 3 tokens.",
-    "tradeoff": "Optional action — but each use accelerates your own death.",
+    "tradeoff": "Optional action - but each use accelerates your own death.",
     "unlock_source": "PvE: Jötunheim boss drop"
   },
   {
@@ -52,7 +52,7 @@
     "display_name": "Rune of Storms",
     "category": "Synergy",
     "effect": "Every 3rd God Power activation deals +2 bonus damage (or +2 healing if defensive).",
-    "tradeoff": "No direct downside — but dead in matches shorter than 4 rounds.",
+    "tradeoff": "No direct downside - but dead in matches shorter than 4 rounds.",
     "unlock_source": "PvE: Complete any Realm at Ascension 2+"
   },
   {

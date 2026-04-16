@@ -98,7 +98,7 @@ class SimulationResults:
 
 def run_simulation(
     n_games: int = 10_000,
-    seed: int = 42,
+    seed: int = 5005,
     die_id: str = "DIE_WARRIOR",
 ) -> SimulationResults:
     rng = np.random.default_rng(seed)
@@ -159,7 +159,7 @@ def print_results(r: SimulationResults) -> None:
     sep = "─" * 58
 
     print(f"\n{'═'*58}")
-    print(f"  Fjöld — L0 Simulation Results")
+    print(f"  Fjöld - L0 Simulation Results")
     print(f"{'═'*58}")
     print(f"  Games  : {n:>10,}")
     print(f"  Die    : {r.die_id} × 6 per player")
@@ -197,7 +197,7 @@ def print_results(r: SimulationResults) -> None:
     # --- L0 validation ---
     # L0 metric: decisive P1 win rate 48-52% (first-mover parity check).
     # Match length target (5-8 rds) applies to the FULL game (L2+), not L0.
-    # Draws at L0 are expected: symmetric dice + no GP → parallel HP decay.
+    # Draws at L0 are expected: symmetric dice + no GP -> parallel HP decay.
     print(f"  {'L0 Validation':<30} {'Value':>8}  {'Target':>10}  Status")
     print(f"  {sep}")
 
