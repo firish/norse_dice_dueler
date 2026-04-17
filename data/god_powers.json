@@ -61,7 +61,7 @@
     "tiers": [
       {
         "tier": "T1",
-        "cost": 4,
+        "cost": 5,
         "effect": "Your unblocked arrows this round deal +1 damage each.",
         "damage": null,
         "arrow_bonus": 1
@@ -197,7 +197,7 @@
         "cost": 9,
         "effect": "Restore 6 health.",
         "damage": null,
-        "heal": 8
+        "heal": 6
       }
     ],
     "design_notes": "Reactive - costed higher than damage because healing is guaranteed value."
