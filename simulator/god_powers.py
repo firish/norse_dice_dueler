@@ -4,17 +4,11 @@ god_powers.py
 GodPower definitions loaded from /data/god_powers.json.
 
 Each GodPower has 3 tiers with escalating cost and effect.
-Effect-specific fields (damage, self_damage, arrow_bonus, dmg_min/max) are
-loaded from the JSON and used by the engine during GOD_RESOLVE.
+Effect-specific fields are loaded from JSON and used by the engine
+during GOD_RESOLVE.
 
-L1 scope: 4 offensive GPs implemented (Fenrir's Bite deferred to L2).
-    GP_MJOLNIRS_WRATH  - direct damage
-    GP_SKADIS_VOLLEY   - bonus damage per unblocked arrow
-    GP_SURTRS_FLAME    - direct damage + self damage
-    GP_LOKIS_GAMBIT    - random damage in a range
-
-All other GPs are loaded from JSON but their effects are no-ops until
-the layer that implements them.
+L2 scope: all 16 GPs loaded with full structured fields.
+Bragi's Song is loaded but deferred (no archetype uses it).
 """
 
 from __future__ import annotations
@@ -39,19 +33,36 @@ class GodPowerTier:
     """One tier of a God Power.
 
     Example (Mjölnir's Wrath T1):
-        GodPowerTier(
-            tier="T1", cost=6, effect="Deal 2 direct damage...",
-            damage=2, self_damage=0, arrow_bonus=0, dmg_min=0, dmg_max=0,
-        )
+        GodPowerTier(tier="T1", cost=6, effect="Deal 2 direct damage...",
+                     damage=2)
+    Example (Vidar's Reflection T3):
+        GodPowerTier(tier="T3", cost=12, ..., reflect_pct=1.0, reflect_bonus=1)
     """
-    tier: str           # "T1", "T2", "T3"
-    cost: int           # token cost to activate
-    effect: str         # human-readable description (for UI / tooltips)
-    damage: float       # direct damage dealt to opponent (0 if N/A)
-    self_damage: int    # damage dealt to self (Surtr's Flame only; 0 otherwise)
-    arrow_bonus: int    # bonus damage per unblocked arrow (Skaði only; 0 otherwise)
-    dmg_min: int        # minimum random damage (Loki only; 0 otherwise)
-    dmg_max: int        # maximum random damage (Loki only; 0 otherwise)
+    tier: str
+    cost: int
+    effect: str
+    # -- Offense --
+    damage: float = 0       # direct damage to opponent
+    self_damage: int = 0    # damage to self (Surtr)
+    arrow_bonus: int = 0    # bonus per unblocked arrow (Skaði)
+    dmg_min: int = 0        # random damage floor (Loki)
+    dmg_max: int = 0        # random damage ceiling (Loki)
+    bleed_stacks: int = 0   # bleed stacks applied (Fenrir)
+    # -- Defense --
+    block_amount: int = 0   # damage blocked this round (Aegis, Tyr)
+    heal: int = 0           # HP restored (Eir, Freyja, Hel's Purge)
+    reflect_pct: float = 0  # fraction of GP damage reflected (Vidar)
+    reflect_bonus: int = 0  # flat bonus reflected damage (Vidar T3)
+    cleanse: bool = False   # remove all bleed/poison (Hel's Purge)
+    cancel_gp: bool = False # cancel opponent's GP (Frigg)
+    refund_pct: float = 0   # fraction of opponent's tokens refunded on cancel (Frigg)
+    steal_tokens: bool = False  # steal opponent's spent GP tokens (Frigg T3)
+    # -- Utility --
+    token_gain: int = 0     # tokens gained (Freyja, Odin T3, Hel's Purge T3)
+    reroll_count: int = 0   # dice to reroll post-combat (Njordr)
+    # -- Hybrid --
+    unblockable: int = 0    # number of attacks made unblockable (Heimdallr; 99=all)
+    damage_reduction: int = 0  # flat damage reduction this round (Heimdallr)
 
 
 @dataclass(frozen=True)
@@ -85,6 +96,19 @@ def _parse_tier(raw: dict) -> GodPowerTier:
         arrow_bonus=int(raw.get("arrow_bonus") or 0),
         dmg_min=int(raw.get("dmg_min") or 0),
         dmg_max=int(raw.get("dmg_max") or 0),
+        bleed_stacks=int(raw.get("bleed_stacks") or 0),
+        block_amount=int(raw.get("block_amount") or 0),
+        heal=int(raw.get("heal") or 0),
+        reflect_pct=float(raw.get("reflect_pct") or 0),
+        reflect_bonus=int(raw.get("reflect_bonus") or 0),
+        cleanse=bool(raw.get("cleanse", False)),
+        cancel_gp=bool(raw.get("cancel_gp", False)),
+        refund_pct=float(raw.get("refund_pct") or 0),
+        steal_tokens=bool(raw.get("steal_tokens", False)),
+        token_gain=int(raw.get("token_gain") or 0),
+        reroll_count=int(raw.get("reroll_count") or 0),
+        unblockable=int(raw.get("unblockable") or 0),
+        damage_reduction=int(raw.get("damage_reduction") or 0),
     )
 
 

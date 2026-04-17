@@ -10,11 +10,11 @@ Pattern:
 Agents only need to supply actions for KEEP_1, KEEP_2, and GOD_POWER phases.
 All other phases advance automatically (no agent input required).
 
-L0 scope:
-    - No God Powers (GOD_POWER and GOD_RESOLVE are no-ops).
-    - No Battlefield Conditions (REVEAL is a no-op).
-    - No Runes, no status effects (Bleed / Poison).
-    - Full dice rolling, keep/reroll cycle, combat, and token resolution.
+L2 scope:
+    - All 16 God Powers resolved with full resolution order.
+    - Bleed ticks in REVEAL phase.
+    - Heimdallr unblockable attacks in COMBAT phase.
+    - No Battlefield Conditions (L4), no Runes (L5).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import numpy as np
 
 from simulator.game_state import GameEvent, GamePhase, GameState, PlayerState
 from simulator.die_types import DieType
-from simulator.god_powers import GodPower, L1_OFFENSIVE_GP_IDS, load_god_powers
+from simulator.god_powers import GodPower, load_god_powers
 
 if TYPE_CHECKING:
     from simulator.agents import Agent
@@ -248,8 +248,20 @@ class GameEngine:
     # ------------------------------------------------------------------
 
     def _phase_reveal(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        # L0: no battlefield conditions -> immediate pass-through to ROLL.
-        return replace(state, phase=GamePhase.ROLL), []
+        """Bleed ticks (L2+), battlefield conditions (L4+). Then advance to ROLL."""
+        events: list[GameEvent] = []
+        p1 = state.p1
+        p2 = state.p2
+
+        # Bleed: 1 dmg per stack, then decrement stacks by 1.
+        if p1.bleed_stacks > 0:
+            p1 = replace(p1, hp=p1.hp - p1.bleed_stacks, bleed_stacks=p1.bleed_stacks - 1)
+            events.append(GameEvent("bleed_tick", {"player": 1, "damage": state.p1.bleed_stacks, "remaining": p1.bleed_stacks}))
+        if p2.bleed_stacks > 0:
+            p2 = replace(p2, hp=p2.hp - p2.bleed_stacks, bleed_stacks=p2.bleed_stacks - 1)
+            events.append(GameEvent("bleed_tick", {"player": 2, "damage": state.p2.bleed_stacks, "remaining": p2.bleed_stacks}))
+
+        return replace(state, phase=GamePhase.ROLL, p1=p1, p2=p2), events
 
     def _phase_roll(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         p1_faces = _roll_all(self.p1_die_types, self.rng)
@@ -355,9 +367,10 @@ class GameEngine:
 
     def _phase_combat(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
-        Simultaneous attack resolution (Constitution resolution order step 3).
+        Simultaneous attack resolution.
         Axes blocked by opponent Helmets; Arrows blocked by opponent Shields.
-        Both players deal damage at the same time.
+        Heimdallr's Watch makes N attacks unblockable (99 = all).
+        Heimdallr's damage_reduction reduces incoming damage.
         """
         p1 = state.p1
         p2 = state.p2
@@ -371,107 +384,265 @@ class GameEngine:
         p2_helmets = p2.dice_faces.count("FACE_HELMET")
         p2_shields = p2.dice_faces.count("FACE_SHIELD")
 
-        # Net damage: attacker's unblocked faces each deal 1 HP.
-        dmg_to_p2 = max(0, p1_axes - p2_helmets) + max(0, p1_arrows - p2_shields)
-        dmg_to_p1 = max(0, p2_axes - p1_helmets) + max(0, p2_arrows - p1_shields)
+        p1_unblockable, p1_dmg_red = self._get_heimdallr_buffs(p1)
+        p2_unblockable, p2_dmg_red = self._get_heimdallr_buffs(p2)
+
+        dmg_to_p2, p2_blocks = self._calc_dice_damage(p1_axes, p1_arrows, p2_helmets, p2_shields, p1_unblockable)
+        dmg_to_p1, p1_blocks = self._calc_dice_damage(p2_axes, p2_arrows, p1_helmets, p1_shields, p2_unblockable)
+
+        dmg_to_p1 = max(0, dmg_to_p1 - p1_dmg_red)
+        dmg_to_p2 = max(0, dmg_to_p2 - p2_dmg_red)
+
+        # Successful dice blocks generate tokens (1 per 2 blocks, round up).
+        p1_tokens = p1.tokens + (p1_blocks + 1) // 2
+        p2_tokens = p2.tokens + (p2_blocks + 1) // 2
 
         new_state = replace(
             state,
             phase=GamePhase.GOD_RESOLVE,
-            p1=replace(p1, hp=p1.hp - dmg_to_p1),
-            p2=replace(p2, hp=p2.hp - dmg_to_p2),
+            p1=replace(p1, hp=p1.hp - dmg_to_p1, tokens=p1_tokens),
+            p2=replace(p2, hp=p2.hp - dmg_to_p2, tokens=p2_tokens),
         )
         return new_state, [
-            GameEvent("combat", {"dmg_to_p1": dmg_to_p1, "dmg_to_p2": dmg_to_p2})
+            GameEvent("combat", {
+                "dmg_to_p1": dmg_to_p1, "dmg_to_p2": dmg_to_p2,
+                "p1_block_tokens": p1_blocks, "p2_block_tokens": p2_blocks,
+            })
         ]
+
+    def _get_heimdallr_buffs(self, player: PlayerState) -> tuple[int, int]:
+        """Return (unblockable_count, damage_reduction) from Heimdallr's Watch if chosen."""
+        if player.gp_choice is None:
+            return 0, 0
+        gp_id, tier_idx = player.gp_choice
+        if gp_id != "GP_HEIMDALLRS_WATCH":
+            return 0, 0
+        gp = self._god_powers.get(gp_id)
+        if gp is None:
+            return 0, 0
+        tier = gp.tiers[tier_idx]
+        return tier.unblockable, tier.damage_reduction
+
+    @staticmethod
+    def _calc_dice_damage(
+        axes: int, arrows: int, opp_helmets: int, opp_shields: int,
+        unblockable: int,
+    ) -> tuple[int, int]:
+        """Calculate dice combat damage and successful blocks.
+
+        Returns (damage, blocks_by_defender).
+        """
+        if unblockable >= axes + arrows:
+            return axes + arrows, 0
+        total_attacks = axes + arrows
+        total_blocks = min(axes, opp_helmets) + min(arrows, opp_shields)
+        normal_dmg = total_attacks - total_blocks
+        bypassed = min(unblockable, total_blocks)
+        effective_blocks = total_blocks - bypassed
+        return normal_dmg + bypassed, effective_blocks
 
     def _phase_god_resolve(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
-        Apply both players' chosen God Powers simultaneously (L1: offensive GPs only).
+        Full L2 God Power resolution.
 
-        Resolution order (CLAUDE.md step 5): offensive GPs activate after combat.
-        Both players' damage is calculated first, then applied simultaneously.
-        This means Surtr self-damage and opponent damage both land at the same time.
-
-        GPs implemented at L1 (Fenrir deferred to L2):
-          GP_MJOLNIRS_WRATH  - direct damage to opponent
-          GP_SKADIS_VOLLEY   - bonus per unblocked arrow (recalculated from final dice)
-          GP_SURTRS_FLAME    - direct damage to opponent + self damage
-          GP_LOKIS_GAMBIT    - random damage in [dmg_min, dmg_max] inclusive
+        Resolution order:
+          1. Frigg's Veil - cancel opponent's GP
+          2. Aegis of Baldr / Tyr's Judgment - set up damage shields
+          3. Vidar's Reflection - set up reflect
+          4. Offensive GPs - Mjolnir, Fenrir, Skadi, Surtr, Loki, Tyr (damage)
+             - Damage reduced by Aegis shields, reflected by Vidar
+          5. Healing - Eir's Mercy, Freyja (heal), Hel's Purge (cleanse + heal)
+          6. Tokens - Freyja (token gain), Odin (token gain), Hel's Purge T3 (tokens)
+          7. Njordr's Tide - post-combat reroll (affects token phase)
+          8. Heimdallr - already resolved in _phase_combat
+          9. Bragi's Song - deferred (no archetype uses it)
         """
         p1 = state.p1
         p2 = state.p2
 
         if p1.gp_choice is None and p2.gp_choice is None:
-            return replace(state, phase=GamePhase.TOKENS), []
+            return replace(state, phase=GamePhase.TOKENS, p1=replace(p1, gp_choice=None), p2=replace(p2, gp_choice=None)), []
 
         events: list[GameEvent] = []
 
-        # Calculate all damage before applying (simultaneous resolution).
-        dmg_to_p2 = 0
-        dmg_to_p1 = 0
+        def _get_gp_tier(player: PlayerState):
+            if player.gp_choice is None:
+                return None, None, None
+            gp_id, tier_idx = player.gp_choice
+            gp = self._god_powers.get(gp_id)
+            if gp is None:
+                return gp_id, tier_idx, None
+            return gp_id, tier_idx, gp.tiers[tier_idx]
+
+        p1_gp_id, p1_tier_idx, p1_tier = _get_gp_tier(p1)
+        p2_gp_id, p2_tier_idx, p2_tier = _get_gp_tier(p2)
+
+        # --- 1. Frigg's Veil: cancel opponent's GP ---
+        p1_cancelled = False
+        p2_cancelled = False
+        p1_tokens = p1.tokens
+        p2_tokens = p2.tokens
+
+        if p1_gp_id == "GP_FRIGGS_VEIL" and p1_tier is not None and p2.gp_choice is not None:
+            p2_cancelled = True
+            if p1_tier.steal_tokens and p2_tier is not None:
+                p1_tokens += p2_tier.cost
+            elif p2_tier is not None:
+                p2_tokens += int(p2_tier.cost * p1_tier.refund_pct)
+            events.append(GameEvent("gp_cancel", {"player": 1, "cancelled_player": 2, "steal": p1_tier.steal_tokens}))
+
+        if p2_gp_id == "GP_FRIGGS_VEIL" and p2_tier is not None and p1.gp_choice is not None and not p1_cancelled:
+            p1_cancelled = True
+            if p2_tier.steal_tokens and p1_tier is not None:
+                p2_tokens += p1_tier.cost
+            elif p1_tier is not None:
+                p1_tokens += int(p1_tier.cost * p2_tier.refund_pct)
+            events.append(GameEvent("gp_cancel", {"player": 2, "cancelled_player": 1, "steal": p2_tier.steal_tokens}))
+
+        if p1_gp_id == "GP_FRIGGS_VEIL":
+            p1_cancelled = True  # Frigg itself doesn't do offense/defense after cancel
+
+        if p2_gp_id == "GP_FRIGGS_VEIL":
+            p2_cancelled = True
+
+        # --- 2. Defensive shields (Aegis, Tyr) ---
+        p1_shield = 0
+        p2_shield = 0
+        if not p1_cancelled and p1_tier is not None:
+            p1_shield = p1_tier.block_amount
+        if not p2_cancelled and p2_tier is not None:
+            p2_shield = p2_tier.block_amount
+
+        # --- 3. Vidar's Reflection ---
+        p1_reflect_pct = 0.0
+        p1_reflect_bonus = 0
+        p2_reflect_pct = 0.0
+        p2_reflect_bonus = 0
+        if not p1_cancelled and p1_gp_id == "GP_VIDARS_REFLECTION" and p1_tier is not None:
+            p1_reflect_pct = p1_tier.reflect_pct
+            p1_reflect_bonus = p1_tier.reflect_bonus
+        if not p2_cancelled and p2_gp_id == "GP_VIDARS_REFLECTION" and p2_tier is not None:
+            p2_reflect_pct = p2_tier.reflect_pct
+            p2_reflect_bonus = p2_tier.reflect_bonus
+
+        # --- 4. Offensive GPs ---
+        raw_dmg_to_p2 = 0
+        raw_dmg_to_p1 = 0
         self_dmg_to_p1 = 0
         self_dmg_to_p2 = 0
+        p1_bleed_add = 0
+        p2_bleed_add = 0
 
-        def _resolve_offensive(
-            attacker: PlayerState,
-            defender: PlayerState,
-            gp_id: str,
-            tier_idx: int,
-        ) -> tuple[int, int]:
-            """Return (damage_to_defender, self_damage_to_attacker)."""
-            gp = self._god_powers.get(gp_id)
-            if gp is None or gp_id not in L1_OFFENSIVE_GP_IDS:
-                return 0, 0
-            tier = gp.tiers[tier_idx]
-
-            if gp_id == "GP_MJOLNIRS_WRATH":
-                return int(tier.damage), 0
-
-            if gp_id == "GP_SURTRS_FLAME":
-                return int(tier.damage), tier.self_damage
-
-            if gp_id == "GP_LOKIS_GAMBIT":
-                dmg = int(self.rng.integers(tier.dmg_min, tier.dmg_max + 1))
-                return dmg, 0
-
-            if gp_id == "GP_SKADIS_VOLLEY":
-                # Bonus applies to arrows that were unblocked during combat this round.
-                # Recalculate from final dice state (dice unchanged since REROLL_2).
-                attacker_arrows = attacker.dice_faces.count("FACE_ARROW")
-                defender_shields = defender.dice_faces.count("FACE_SHIELD")
-                unblocked = max(0, attacker_arrows - defender_shields)
-                return unblocked * tier.arrow_bonus, 0
-
-            return 0, 0
-
-        if p1.gp_choice is not None:
-            gp_id, tier_idx = p1.gp_choice
-            d, sd = _resolve_offensive(p1, p2, gp_id, tier_idx)
-            dmg_to_p2 += d
+        if not p1_cancelled and p1_tier is not None:
+            d, sd, bleed = self._calc_offensive_gp(p1, p2, p1_gp_id, p1_tier)
+            raw_dmg_to_p2 += d
             self_dmg_to_p1 += sd
-            events.append(GameEvent("gp_resolved", {
-                "player": 1, "gp_id": gp_id, "tier": tier_idx,
-                "dmg_to_opponent": d, "self_damage": sd,
-            }))
+            p2_bleed_add += bleed
+            if d > 0 or sd > 0 or bleed > 0:
+                events.append(GameEvent("gp_resolved", {"player": 1, "gp_id": p1_gp_id, "tier": p1_tier_idx, "dmg_to_opponent": d, "self_damage": sd, "bleed": bleed}))
 
-        if p2.gp_choice is not None:
-            gp_id, tier_idx = p2.gp_choice
-            d, sd = _resolve_offensive(p2, p1, gp_id, tier_idx)
-            dmg_to_p1 += d
+        if not p2_cancelled and p2_tier is not None:
+            d, sd, bleed = self._calc_offensive_gp(p2, p1, p2_gp_id, p2_tier)
+            raw_dmg_to_p1 += d
             self_dmg_to_p2 += sd
-            events.append(GameEvent("gp_resolved", {
-                "player": 2, "gp_id": gp_id, "tier": tier_idx,
-                "dmg_to_opponent": d, "self_damage": sd,
-            }))
+            p1_bleed_add += bleed
+            if d > 0 or sd > 0 or bleed > 0:
+                events.append(GameEvent("gp_resolved", {"player": 2, "gp_id": p2_gp_id, "tier": p2_tier_idx, "dmg_to_opponent": d, "self_damage": sd, "bleed": bleed}))
+
+        # Apply shields: reduce incoming GP damage.
+        shielded_dmg_to_p1 = max(0, raw_dmg_to_p1 - p1_shield)
+        shielded_dmg_to_p2 = max(0, raw_dmg_to_p2 - p2_shield)
+
+        # Apply reflect: damage reflected back to attacker.
+        reflect_dmg_to_p2 = 0
+        reflect_dmg_to_p1 = 0
+        if p1_reflect_pct > 0 and raw_dmg_to_p1 > 0:
+            reflect_dmg_to_p2 = int(raw_dmg_to_p1 * p1_reflect_pct) + p1_reflect_bonus
+            events.append(GameEvent("gp_reflect", {"player": 1, "reflected": reflect_dmg_to_p2}))
+        if p2_reflect_pct > 0 and raw_dmg_to_p2 > 0:
+            reflect_dmg_to_p1 = int(raw_dmg_to_p2 * p2_reflect_pct) + p2_reflect_bonus
+            events.append(GameEvent("gp_reflect", {"player": 2, "reflected": reflect_dmg_to_p1}))
+
+        final_dmg_to_p1 = shielded_dmg_to_p1 + self_dmg_to_p1 + reflect_dmg_to_p1
+        final_dmg_to_p2 = shielded_dmg_to_p2 + self_dmg_to_p2 + reflect_dmg_to_p2
+
+        # --- 5. Healing ---
+        p1_heal = 0
+        p2_heal = 0
+        if not p1_cancelled and p1_tier is not None:
+            p1_heal = p1_tier.heal
+            if p1_tier.cleanse:
+                p1_bleed_add = -999  # sentinel: clear all bleed
+        if not p2_cancelled and p2_tier is not None:
+            p2_heal = p2_tier.heal
+            if p2_tier.cleanse:
+                p2_bleed_add = -999
+
+        # --- 6. Token gain ---
+        if not p1_cancelled and p1_tier is not None:
+            p1_tokens += p1_tier.token_gain
+        if not p2_cancelled and p2_tier is not None:
+            p2_tokens += p2_tier.token_gain
+
+        # --- 7. Njordr's Tide: reroll dice for token phase ---
+        new_p1_faces = p1.dice_faces
+        new_p2_faces = p2.dice_faces
+        if not p1_cancelled and p1_gp_id == "GP_NJORDS_TIDE" and p1_tier is not None:
+            new_p1_faces = self._njordr_reroll(p1.dice_faces, p1_tier.reroll_count, self.p1_die_types)
+            events.append(GameEvent("njordr_reroll", {"player": 1, "count": p1_tier.reroll_count}))
+        if not p2_cancelled and p2_gp_id == "GP_NJORDS_TIDE" and p2_tier is not None:
+            new_p2_faces = self._njordr_reroll(p2.dice_faces, p2_tier.reroll_count, self.p2_die_types)
+            events.append(GameEvent("njordr_reroll", {"player": 2, "count": p2_tier.reroll_count}))
+
+        # --- Apply all changes ---
+        p1_new_hp = max(0, p1.hp - final_dmg_to_p1 + p1_heal)
+        p2_new_hp = max(0, p2.hp - final_dmg_to_p2 + p2_heal)
+        # Cap HP at STARTING_HP (no overhealing).
+        p1_new_hp = min(p1_new_hp, STARTING_HP)
+        p2_new_hp = min(p2_new_hp, STARTING_HP)
+
+        p1_new_bleed = p1.bleed_stacks + p1_bleed_add if p1_bleed_add != -999 else 0
+        p2_new_bleed = p2.bleed_stacks + p2_bleed_add if p2_bleed_add != -999 else 0
 
         new_state = replace(
             state,
             phase=GamePhase.TOKENS,
-            p1=replace(p1, hp=p1.hp - dmg_to_p1 - self_dmg_to_p1, gp_choice=None),
-            p2=replace(p2, hp=p2.hp - dmg_to_p2 - self_dmg_to_p2, gp_choice=None),
+            p1=replace(p1, hp=p1_new_hp, tokens=p1_tokens, bleed_stacks=max(0, p1_new_bleed),
+                       dice_faces=new_p1_faces, gp_choice=None),
+            p2=replace(p2, hp=p2_new_hp, tokens=p2_tokens, bleed_stacks=max(0, p2_new_bleed),
+                       dice_faces=new_p2_faces, gp_choice=None),
         )
         return new_state, events
+
+    def _calc_offensive_gp(self, attacker, defender, gp_id, tier) -> tuple[int, int, int]:
+        """Return (damage, self_damage, bleed_stacks) for an offensive GP."""
+        if gp_id == "GP_MJOLNIRS_WRATH":
+            return int(tier.damage), 0, 0
+        if gp_id == "GP_SURTRS_FLAME":
+            return int(tier.damage), tier.self_damage, 0
+        if gp_id == "GP_LOKIS_GAMBIT":
+            dmg = int(self.rng.integers(tier.dmg_min, tier.dmg_max + 1))
+            return dmg, 0, 0
+        if gp_id == "GP_SKADIS_VOLLEY":
+            attacker_arrows = attacker.dice_faces.count("FACE_ARROW")
+            defender_shields = defender.dice_faces.count("FACE_SHIELD")
+            unblocked = max(0, attacker_arrows - defender_shields)
+            return unblocked * tier.arrow_bonus, 0, 0
+        if gp_id == "GP_FENRIRS_BITE":
+            return int(tier.damage), 0, tier.bleed_stacks
+        if gp_id == "GP_TYRS_JUDGMENT":
+            return int(tier.damage), 0, 0
+        return 0, 0, 0
+
+    def _njordr_reroll(self, faces: tuple[str, ...], count: int, die_types: list[DieType]) -> tuple[str, ...]:
+        """Reroll up to `count` random dice (for Njordr's Tide post-combat reroll)."""
+        if count >= NUM_DICE:
+            return _roll_all(die_types, self.rng)
+        indices = self.rng.choice(NUM_DICE, size=min(count, NUM_DICE), replace=False)
+        new_faces = list(faces)
+        for i in indices:
+            new_faces[i] = _roll_die(die_types[i], self.rng)
+        return tuple(new_faces)
 
     def _phase_tokens(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
