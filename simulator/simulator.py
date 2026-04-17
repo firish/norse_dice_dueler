@@ -575,6 +575,661 @@ def print_l2_results(r: L2Results) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Intra-Archetype Tournament System
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ArchetypeVariant:
+    name: str
+    archetype: str
+    agent_cls: type
+    agent_kwargs: dict
+    dice_loadout: list[str]
+    gp_loadout: tuple[str, ...]
+
+
+# --- Custom GP selection functions for complex variants ---
+
+def _a5_unblockable_archer_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    arrows = player.dice_faces.count("FACE_ARROW")
+    opp_shields = opponent.dice_faces.count("FACE_SHIELD")
+    unblocked = max(0, arrows - opp_shields)
+    if unblocked >= 3:
+        gp = god_powers.get("GP_SKADIS_VOLLEY")
+        if gp and "GP_SKADIS_VOLLEY" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_SKADIS_VOLLEY", t)
+    opp_helmets = opponent.dice_faces.count("FACE_HELMET")
+    if opp_helmets >= 2:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+    gp = god_powers.get("GP_SURTRS_FLAME")
+    if gp and "GP_SURTRS_FLAME" in player.gp_loadout:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_SURTRS_FLAME", t)
+    return None
+
+
+def _co2_unblockable_axes_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    axes = player.dice_faces.count("FACE_AXE")
+    if axes >= 3:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+    for gp_id in ("GP_FENRIRS_BITE", "GP_SURTRS_FLAME"):
+        gp = god_powers.get(gp_id)
+        if gp and gp_id in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return (gp_id, t)
+    return None
+
+
+def _co3_reflect_bait_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    if opponent.tokens >= 12:
+        gp = god_powers.get("GP_VIDARS_REFLECTION")
+        if gp and "GP_VIDARS_REFLECTION" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_VIDARS_REFLECTION", t)
+    for gp_id in ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"):
+        gp = god_powers.get(gp_id)
+        if gp and gp_id in player.gp_loadout:
+            for t in (0, 1, 2):
+                if player.tokens >= gp.tiers[t].cost:
+                    return (gp_id, t)
+    return None
+
+
+def _co4_bleed_stack_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    gp = god_powers.get("GP_FENRIRS_BITE")
+    if gp and "GP_FENRIRS_BITE" in player.gp_loadout:
+        if player.tokens >= gp.tiers[1].cost:
+            return ("GP_FENRIRS_BITE", 1)
+        if player.tokens >= gp.tiers[0].cost:
+            return ("GP_FENRIRS_BITE", 0)
+    gp = god_powers.get("GP_FREYAS_BLESSING")
+    if gp and "GP_FREYAS_BLESSING" in player.gp_loadout:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_FREYAS_BLESSING", t)
+    gp = god_powers.get("GP_SURTRS_FLAME")
+    if gp and "GP_SURTRS_FLAME" in player.gp_loadout:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_SURTRS_FLAME", t)
+    return None
+
+
+def _e5_jotun_bankroll_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    gp = god_powers.get("GP_MJOLNIRS_WRATH")
+    if gp and "GP_MJOLNIRS_WRATH" in player.gp_loadout:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_MJOLNIRS_WRATH", t)
+    gp = god_powers.get("GP_FENRIRS_BITE")
+    if gp and "GP_FENRIRS_BITE" in player.gp_loadout:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_FENRIRS_BITE", t)
+    if player.tokens >= 6:
+        gp = god_powers.get("GP_FREYAS_BLESSING")
+        if gp and "GP_FREYAS_BLESSING" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_FREYAS_BLESSING", t)
+    return None
+
+
+def _co6_odin_burst_gp(state, player_num, god_powers):
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    opp_shields = opponent.dice_faces.count("FACE_SHIELD")
+    opp_helmets = opponent.dice_faces.count("FACE_HELMET")
+    arrows = player.dice_faces.count("FACE_ARROW")
+    axes = player.dice_faces.count("FACE_AXE")
+    unblocked_arrows = max(0, arrows - opp_shields)
+    if unblocked_arrows >= 2:
+        gp = god_powers.get("GP_SKADIS_VOLLEY")
+        if gp and "GP_SKADIS_VOLLEY" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_SKADIS_VOLLEY", t)
+    if opp_helmets >= 2 and axes >= 2:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+    gp = god_powers.get("GP_ODINS_INSIGHT")
+    if gp and "GP_ODINS_INSIGHT" in player.gp_loadout:
+        if player.tokens >= gp.tiers[2].cost:
+            return ("GP_ODINS_INSIGHT", 2)
+    return None
+
+
+# --- Variant definitions ---
+
+_VARIANTS: dict[str, ArchetypeVariant] = {}
+
+
+def _build_variants() -> dict[str, ArchetypeVariant]:
+    if _VARIANTS:
+        return _VARIANTS
+
+    vs = {
+        # ===== AGGRO =====
+        "A1": ArchetypeVariant(
+            name="A1 Berserker Blitz",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={},
+            dice_loadout=["DIE_BERSERKER"] * 4 + ["DIE_GAMBLER"] * 2,
+            gp_loadout=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH"),
+        ),
+        "A2": ArchetypeVariant(
+            name="A2 Tyr Rush",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={"gp_priority": ("GP_TYRS_JUDGMENT", "GP_SURTRS_FLAME", "GP_FENRIRS_BITE")},
+            dice_loadout=["DIE_BERSERKER"] * 4 + ["DIE_WARRIOR"] * 2,
+            gp_loadout=("GP_TYRS_JUDGMENT", "GP_SURTRS_FLAME", "GP_FENRIRS_BITE"),
+        ),
+        "A3": ArchetypeVariant(
+            name="A3 Jotun Bleed",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_AXE", "FACE_HAND_BORDERED"}),
+                "gp_priority": ("GP_FENRIRS_BITE", "GP_SURTRS_FLAME", "GP_HEIMDALLRS_WATCH"),
+            },
+            dice_loadout=["DIE_JOTUN"] * 4 + ["DIE_BERSERKER"] * 2,
+            gp_loadout=("GP_FENRIRS_BITE", "GP_SURTRS_FLAME", "GP_HEIMDALLRS_WATCH"),
+        ),
+        "A4": ArchetypeVariant(
+            name="A4 Glass Cannon",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={"gp_priority": ("GP_SURTRS_FLAME", "GP_TYRS_JUDGMENT", "GP_LOKIS_GAMBIT")},
+            dice_loadout=["DIE_GAMBLER"] * 6,
+            gp_loadout=("GP_SURTRS_FLAME", "GP_TYRS_JUDGMENT", "GP_LOKIS_GAMBIT"),
+        ),
+        "A5": ArchetypeVariant(
+            name="A5 Unblockable Archer",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_ARROW", "FACE_HAND_BORDERED"}),
+                "gp_select_fn": _a5_unblockable_archer_gp,
+            },
+            dice_loadout=["DIE_GAMBLER"] * 4 + ["DIE_HUNTER"] * 2,
+            gp_loadout=("GP_SKADIS_VOLLEY", "GP_HEIMDALLRS_WATCH", "GP_SURTRS_FLAME"),
+        ),
+        "A6": ArchetypeVariant(
+            name="A6 Loki Finisher",
+            archetype="AGGRO",
+            agent_cls=AggroAgent,
+            agent_kwargs={"gp_priority": ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_LOKIS_GAMBIT")},
+            dice_loadout=["DIE_BERSERKER"] * 4 + ["DIE_GAMBLER"] * 2,
+            gp_loadout=("GP_LOKIS_GAMBIT", "GP_SURTRS_FLAME", "GP_FENRIRS_BITE"),
+        ),
+
+        # ===== CONTROL =====
+        "C1": ArchetypeVariant(
+            name="C1 Tyr Wall",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={},
+            dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_WARRIOR"] * 2 + ["DIE_SKALD"] * 1,
+            gp_loadout=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
+        ),
+        "C2": ArchetypeVariant(
+            name="C2 Pure Wall",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
+            },
+            dice_loadout=["DIE_WARDEN"] * 4 + ["DIE_SKALD"] * 2,
+            gp_loadout=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
+        ),
+        "C3": ArchetypeVariant(
+            name="C3 Frigg Fortress",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
+                "gp_priority_healthy": ("GP_FRIGGS_VEIL", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                "gp_priority_hurt": ("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FRIGGS_VEIL"),
+            },
+            dice_loadout=["DIE_WARDEN"] * 4 + ["DIE_MISER"] * 2,
+            gp_loadout=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_FRIGGS_VEIL"),
+        ),
+        "C4": ArchetypeVariant(
+            name="C4 Hel's Wall",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
+                "gp_priority_healthy": ("GP_HELS_PURGE", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                "gp_priority_hurt": ("GP_EIRS_MERCY", "GP_HELS_PURGE", "GP_AEGIS_OF_BALDR"),
+            },
+            dice_loadout=["DIE_WARDEN"] * 4 + ["DIE_WARRIOR"] * 2,
+            gp_loadout=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_HELS_PURGE"),
+        ),
+        "C5": ArchetypeVariant(
+            name="C5 Offensive Control",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_AXE", "FACE_HAND_BORDERED"}),
+                "gp_priority_healthy": ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                "gp_priority_hurt": ("GP_EIRS_MERCY", "GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR"),
+            },
+            dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_JOTUN"] * 3,
+            gp_loadout=("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+        ),
+        "C6": ArchetypeVariant(
+            name="C6 Sustain Engine",
+            archetype="CONTROL",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
+                "gp_priority_healthy": ("GP_FREYAS_BLESSING", "GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR"),
+                "gp_priority_hurt": ("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FREYAS_BLESSING"),
+            },
+            dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_SKALD"] * 2 + ["DIE_MISER"] * 1,
+            gp_loadout=("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FREYAS_BLESSING"),
+        ),
+
+        # ===== ECONOMY =====
+        "E1": ArchetypeVariant(
+            name="E1 Standard Hoard",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={},
+            dice_loadout=["DIE_MISER"] * 3 + ["DIE_WARRIOR"] * 2 + ["DIE_WARDEN"] * 1,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
+        ),
+        "E2": ArchetypeVariant(
+            name="E2 Token Thief",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HAND_BORDERED", "FACE_HAND", "FACE_ARROW"}),
+            },
+            dice_loadout=["DIE_MISER"] * 3 + ["DIE_HUNTER"] * 3,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
+        ),
+        "E3": ArchetypeVariant(
+            name="E3 Skald Hoard",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}),
+            },
+            dice_loadout=["DIE_SKALD"] * 4 + ["DIE_MISER"] * 2,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
+        ),
+        "E4": ArchetypeVariant(
+            name="E4 Defensive Economy",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HAND_BORDERED", "FACE_HELMET", "FACE_SHIELD"}),
+                "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                "token_threshold": 4,
+                "frigg_threshold": 99,
+            },
+            dice_loadout=["DIE_MISER"] * 3 + ["DIE_WARDEN"] * 2 + ["DIE_WARRIOR"] * 1,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+        ),
+        "E5": ArchetypeVariant(
+            name="E5 Jotun Bankroll",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_AXE", "FACE_HAND_BORDERED"}),
+                "gp_select_fn": _e5_jotun_bankroll_gp,
+            },
+            dice_loadout=["DIE_JOTUN"] * 3 + ["DIE_MISER"] * 2 + ["DIE_WARRIOR"] * 1,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FENRIRS_BITE", "GP_FREYAS_BLESSING"),
+        ),
+        "E6": ArchetypeVariant(
+            name="E6 Frigg Trap",
+            archetype="ECONOMY",
+            agent_cls=EconomyAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HAND_BORDERED", "FACE_HAND"}),
+                "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_FRIGGS_VEIL", "GP_NJORDS_TIDE"),
+                "frigg_threshold": 6,
+            },
+            dice_loadout=["DIE_MISER"] * 3 + ["DIE_HUNTER"] * 2 + ["DIE_WARDEN"] * 1,
+            gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FRIGGS_VEIL", "GP_NJORDS_TIDE"),
+        ),
+
+        # ===== COMBO =====
+        "Co1": ArchetypeVariant(
+            name="Co1 Arrow Volley",
+            archetype="COMBO",
+            agent_cls=ComboAgent,
+            agent_kwargs={},
+            dice_loadout=["DIE_HUNTER"] * 4 + ["DIE_GAMBLER"] * 2,
+            gp_loadout=("GP_SKADIS_VOLLEY", "GP_NJORDS_TIDE", "GP_ODINS_INSIGHT"),
+        ),
+        "Co2": ArchetypeVariant(
+            name="Co2 Unblockable Axes",
+            archetype="COMBO",
+            agent_cls=AggroAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_AXE", "FACE_HAND_BORDERED"}),
+                "gp_select_fn": _co2_unblockable_axes_gp,
+            },
+            dice_loadout=["DIE_JOTUN"] * 4 + ["DIE_BERSERKER"] * 2,
+            gp_loadout=("GP_HEIMDALLRS_WATCH", "GP_FENRIRS_BITE", "GP_SURTRS_FLAME"),
+        ),
+        "Co3": ArchetypeVariant(
+            name="Co3 Reflect Bait",
+            archetype="COMBO",
+            agent_cls=ControlAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
+                "gp_select_fn": _co3_reflect_bait_gp,
+            },
+            dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_SKALD"] * 2 + ["DIE_MISER"] * 1,
+            gp_loadout=("GP_VIDARS_REFLECTION", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+        ),
+        "Co4": ArchetypeVariant(
+            name="Co4 Bleed Stack",
+            archetype="COMBO",
+            agent_cls=AggroAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_HAND_BORDERED", "FACE_AXE"}),
+                "gp_select_fn": _co4_bleed_stack_gp,
+            },
+            dice_loadout=["DIE_JOTUN"] * 3 + ["DIE_MISER"] * 2 + ["DIE_WARRIOR"] * 1,
+            gp_loadout=("GP_FENRIRS_BITE", "GP_FREYAS_BLESSING", "GP_SURTRS_FLAME"),
+        ),
+        "Co5": ArchetypeVariant(
+            name="Co5 Arrow + Bleed",
+            archetype="COMBO",
+            agent_cls=ComboAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_ARROW", "FACE_HAND_BORDERED", "FACE_HAND"}),
+                "gp_priority": ("GP_SKADIS_VOLLEY", "GP_FENRIRS_BITE", "GP_NJORDS_TIDE"),
+            },
+            dice_loadout=["DIE_HUNTER"] * 4 + ["DIE_WARRIOR"] * 2,
+            gp_loadout=("GP_SKADIS_VOLLEY", "GP_FENRIRS_BITE", "GP_NJORDS_TIDE"),
+        ),
+        "Co6": ArchetypeVariant(
+            name="Co6 Odin Burst",
+            archetype="COMBO",
+            agent_cls=ComboAgent,
+            agent_kwargs={
+                "keep_faces": frozenset({"FACE_ARROW", "FACE_HAND_BORDERED", "FACE_AXE"}),
+                "gp_select_fn": _co6_odin_burst_gp,
+            },
+            dice_loadout=["DIE_HUNTER"] * 3 + ["DIE_GAMBLER"] * 2 + ["DIE_WARRIOR"] * 1,
+            gp_loadout=("GP_ODINS_INSIGHT", "GP_SKADIS_VOLLEY", "GP_HEIMDALLRS_WATCH"),
+        ),
+    }
+
+    _VARIANTS.update(vs)
+    return vs
+
+
+# --- Tournament runner ---
+
+@dataclass
+class IntraResult:
+    variant: str
+    wins: int = 0
+    losses: int = 0
+    draws: int = 0
+    total_games: int = 0
+
+    @property
+    def decisive_win_rate(self) -> float:
+        d = self.wins + self.losses
+        return self.wins / d if d > 0 else 0.5
+
+
+def run_intra_tournament(
+    archetype: str,
+    n_games: int = 1_000,
+    seed: int = 42,
+) -> dict[str, IntraResult]:
+    die_types = load_die_types()
+    variants = _build_variants()
+    arch_variants = {k: v for k, v in variants.items() if v.archetype == archetype}
+    vnames = list(arch_variants.keys())
+
+    results: dict[str, IntraResult] = {k: IntraResult(variant=k) for k in vnames}
+
+    t0 = time.perf_counter()
+    for i, v1_name in enumerate(vnames):
+        for j, v2_name in enumerate(vnames):
+            if i == j:
+                continue
+            rng = np.random.default_rng(seed)
+            v1 = arch_variants[v1_name]
+            v2 = arch_variants[v2_name]
+
+            p1_dice = [die_types[d] for d in v1.dice_loadout]
+            p2_dice = [die_types[d] for d in v2.dice_loadout]
+
+            engine = GameEngine(
+                p1_dice, p2_dice, rng,
+                p1_gp_ids=v1.gp_loadout,
+                p2_gp_ids=v2.gp_loadout,
+            )
+            p1_agent = v1.agent_cls(rng=rng, **v1.agent_kwargs)
+            p2_agent = v2.agent_cls(rng=rng, **v2.agent_kwargs)
+
+            for _ in range(n_games):
+                final_state, _ = engine.run_game(p1_agent, p2_agent)
+                winner = final_state.winner
+                if winner == 1:
+                    results[v1_name].wins += 1
+                    results[v2_name].losses += 1
+                elif winner == 2:
+                    results[v2_name].wins += 1
+                    results[v1_name].losses += 1
+                else:
+                    results[v1_name].draws += 1
+                    results[v2_name].draws += 1
+                results[v1_name].total_games += 1
+                results[v2_name].total_games += 1
+
+    elapsed = time.perf_counter() - t0
+    print(f"\n  Intra-tournament ({archetype}): {len(vnames)} variants, "
+          f"{n_games} games/matchup, {elapsed:.1f}s")
+    return results
+
+
+def run_cross_validation(
+    winner_ids: list[str],
+    n_games: int = 1_000,
+    seed: int = 42,
+) -> L2Results:
+    die_types = load_die_types()
+    variants = _build_variants()
+    configs = {}
+    for vid in winner_ids:
+        v = variants[vid]
+        configs[v.archetype] = ArchetypeConfig(
+            name=v.name,
+            agent_cls=v.agent_cls,
+            dice_loadout=v.dice_loadout,
+            gp_loadout=v.gp_loadout,
+        )
+
+    arch_names = list(configs.keys())
+    results = L2Results()
+
+    t0 = time.perf_counter()
+    for p1_name in arch_names:
+        for p2_name in arch_names:
+            rng = np.random.default_rng(seed)
+            p1_cfg = configs[p1_name]
+            p2_cfg = configs[p2_name]
+
+            p1_dice = [die_types[d] for d in p1_cfg.dice_loadout]
+            p2_dice = [die_types[d] for d in p2_cfg.dice_loadout]
+
+            engine = GameEngine(
+                p1_dice, p2_dice, rng,
+                p1_gp_ids=p1_cfg.gp_loadout,
+                p2_gp_ids=p2_cfg.gp_loadout,
+            )
+
+            v1 = variants[winner_ids[arch_names.index(p1_name)]]
+            v2 = variants[winner_ids[arch_names.index(p2_name)]]
+            p1_agent = v1.agent_cls(rng=rng, **v1.agent_kwargs)
+            p2_agent = v2.agent_cls(rng=rng, **v2.agent_kwargs)
+
+            matchup = L2MatchupResult(p1_arch=p1_name, p2_arch=p2_name, n_games=n_games)
+            for _ in range(n_games):
+                final_state, _ = engine.run_game(p1_agent, p2_agent)
+                winner = final_state.winner
+                if winner == 1:
+                    matchup.p1_wins += 1
+                elif winner == 2:
+                    matchup.p2_wins += 1
+                else:
+                    matchup.draws += 1
+                matchup.rounds_per_game.append(final_state.round_num)
+            results.matchups[(p1_name, p2_name)] = matchup
+
+    results.elapsed_sec = time.perf_counter() - t0
+    return results
+
+
+def print_intra_results(results: dict[str, IntraResult], archetype: str) -> None:
+    variants = _build_variants()
+    sep = "=" * 70
+
+    print(f"\n{sep}")
+    print(f"  Intra-Archetype Tournament: {archetype}")
+    print(f"  Ranked by decisive win rate (excluding mirrors)")
+    print(sep)
+
+    ranked = sorted(results.values(), key=lambda r: r.decisive_win_rate, reverse=True)
+
+    print(f"  {'Rank':<5} {'Variant':<25} {'Win%':>7} {'W':>5} {'L':>5} {'D':>5} {'Games':>6}")
+    print(f"  {'-'*62}")
+    for i, r in enumerate(ranked, 1):
+        v = variants[r.variant]
+        wr = r.decisive_win_rate
+        marker = " <-- WINNER" if i == 1 else ""
+        print(f"  {i:<5} {v.name:<25} {wr:>6.1%} {r.wins:>5} {r.losses:>5} "
+              f"{r.draws:>5} {r.total_games:>6}{marker}")
+
+    print(f"{sep}\n")
+
+
+# --- Full 24x24 round-robin ---
+
+def run_mega_tournament(
+    n_games: int = 500,
+    seed: int = 42,
+) -> dict[str, IntraResult]:
+    die_types = load_die_types()
+    variants = _build_variants()
+    vnames = list(variants.keys())
+
+    results: dict[str, IntraResult] = {k: IntraResult(variant=k) for k in vnames}
+
+    t0 = time.perf_counter()
+    total_matchups = len(vnames) * (len(vnames) - 1)
+    print(f"  Mega tournament: {len(vnames)} variants, {total_matchups} matchups, "
+          f"{n_games} games each ({total_matchups * n_games:,} total)...")
+
+    for i, v1_name in enumerate(vnames):
+        for j, v2_name in enumerate(vnames):
+            if i == j:
+                continue
+            rng = np.random.default_rng(seed)
+            v1 = variants[v1_name]
+            v2 = variants[v2_name]
+
+            p1_dice = [die_types[d] for d in v1.dice_loadout]
+            p2_dice = [die_types[d] for d in v2.dice_loadout]
+
+            engine = GameEngine(
+                p1_dice, p2_dice, rng,
+                p1_gp_ids=v1.gp_loadout,
+                p2_gp_ids=v2.gp_loadout,
+            )
+            p1_agent = v1.agent_cls(rng=rng, **v1.agent_kwargs)
+            p2_agent = v2.agent_cls(rng=rng, **v2.agent_kwargs)
+
+            for _ in range(n_games):
+                final_state, _ = engine.run_game(p1_agent, p2_agent)
+                winner = final_state.winner
+                if winner == 1:
+                    results[v1_name].wins += 1
+                    results[v2_name].losses += 1
+                elif winner == 2:
+                    results[v2_name].wins += 1
+                    results[v1_name].losses += 1
+                else:
+                    results[v1_name].draws += 1
+                    results[v2_name].draws += 1
+                results[v1_name].total_games += 1
+                results[v2_name].total_games += 1
+
+    elapsed = time.perf_counter() - t0
+    print(f"  Completed in {elapsed:.1f}s")
+    return results
+
+
+def print_mega_results(results: dict[str, IntraResult]) -> None:
+    variants = _build_variants()
+    sep = "=" * 80
+
+    print(f"\n{sep}")
+    print("  Mega Tournament: All 24 Variants Ranked")
+    print(sep)
+
+    ranked = sorted(results.values(), key=lambda r: r.decisive_win_rate, reverse=True)
+
+    print(f"  {'Rank':<5} {'Variant':<25} {'Arch':<8} {'Win%':>7} {'W':>6} {'L':>6} {'D':>6}")
+    print(f"  {'-'*68}")
+    for i, r in enumerate(ranked, 1):
+        v = variants[r.variant]
+        wr = r.decisive_win_rate
+        print(f"  {i:<5} {v.name:<25} {v.archetype:<8} {wr:>6.1%} {r.wins:>6} {r.losses:>6} {r.draws:>6}")
+
+    print(f"\n  Per-archetype best:")
+    best_per_arch: dict[str, tuple[str, float]] = {}
+    for r in ranked:
+        v = variants[r.variant]
+        if v.archetype not in best_per_arch:
+            best_per_arch[v.archetype] = (r.variant, r.decisive_win_rate)
+    for arch in ("AGGRO", "CONTROL", "ECONOMY", "COMBO"):
+        if arch in best_per_arch:
+            vid, wr = best_per_arch[arch]
+            print(f"    {arch:<10} {variants[vid].name:<25} {wr:.1%}")
+
+    print(f"{sep}\n")
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -585,6 +1240,10 @@ def main() -> None:
     parser.add_argument(
         "--level", type=int, default=0, choices=[0, 1, 2],
         help="Simulation layer: 0=raw dice, 1=Greedy vs Random, 2=4x4 archetype matrix (default: 0).",
+    )
+    parser.add_argument(
+        "--tournament", type=str, default=None,
+        help="Run tournament: aggro, control, economy, combo, all (intra), mega (24x24 round-robin), or cross.",
     )
     parser.add_argument(
         "--games", type=int, default=10_000,
@@ -600,7 +1259,23 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.level == 2:
+    if args.tournament:
+        t = args.tournament.lower()
+        if t == "all":
+            for arch in ("AGGRO", "CONTROL", "ECONOMY", "COMBO"):
+                res = run_intra_tournament(arch, n_games=args.games, seed=args.seed)
+                print_intra_results(res, arch)
+        elif t == "mega":
+            res = run_mega_tournament(n_games=args.games, seed=args.seed)
+            print_mega_results(res)
+        elif t == "cross":
+            print("Cross-validation: use run_cross_validation(['A1','C1','E1','Co1'], ...) from Python.")
+        elif t.upper() in ("AGGRO", "CONTROL", "ECONOMY", "COMBO"):
+            res = run_intra_tournament(t.upper(), n_games=args.games, seed=args.seed)
+            print_intra_results(res, t.upper())
+        else:
+            print(f"Unknown tournament target: {t}")
+    elif args.level == 2:
         n_per_matchup = args.games
         print(f"Running L2: {n_per_matchup:,} games x 16 matchups = {n_per_matchup * 16:,} total...")
         results = run_l2_simulation(n_games=n_per_matchup, seed=args.seed)
