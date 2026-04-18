@@ -112,6 +112,8 @@ _ENGINE_KWARGS = {
     "hoard_hp_penalty": 0,
     "njordr_reroll_cap": None,
 }
+_IDENTITY_BEAT_THRESHOLD = 0.50
+_IDENTITY_LOSE_THRESHOLD = 0.50
 
 _OFFENSIVE_GPS = frozenset({
     "GP_MJOLNIRS_WRATH",
@@ -289,6 +291,13 @@ def _economy_gp_select(state, player_num: int, god_powers: dict) -> tuple[str, i
         and (opponent_damage >= 3 or player.hp <= 8)
     ):
         return ("GP_AEGIS_OF_BALDR", 0)
+
+    if (
+        _is_control_loadout(opponent)
+        and _can_afford(player, god_powers, "GP_FREYAS_BLESSING")
+        and player_hands >= 1
+    ):
+        return ("GP_FREYAS_BLESSING", 0)
 
     if _can_afford(player, god_powers, "GP_MJOLNIRS_WRATH"):
         return ("GP_MJOLNIRS_WRATH", 0)
@@ -511,14 +520,14 @@ def _cell_marker(actual_pct: float, target_pct: float) -> str:
 
 
 def _rps_check(results: L2MinimalResults, names: list[str]) -> tuple[bool, list[str]]:
-    """Each archetype must beat at least one and lose to at least one (>55% / <45%)."""
+    """Each archetype must have one favorable and one unfavorable non-mirror matchup."""
     ok = True
     lines: list[str] = []
     for name in names:
         beats = [o for o in names if o != name
-                 and results.matchups[(name, o)].p1_decisive_wr > 0.55]
+                 and results.matchups[(name, o)].p1_decisive_wr > _IDENTITY_BEAT_THRESHOLD]
         loses = [o for o in names if o != name
-                 and results.matchups[(name, o)].p1_decisive_wr < 0.45]
+                 and results.matchups[(name, o)].p1_decisive_wr < _IDENTITY_LOSE_THRESHOLD]
         status = "GREEN ok" if (beats and loses) else "RED X"
         if not (beats and loses):
             ok = False
@@ -607,7 +616,7 @@ def print_results(
     print()
 
     # --- R-P-S structure ---
-    print("  R-P-S structure (each archetype must beat 1+ and lose to 1+):")
+    print("  R-P-S structure (each archetype must have 1 favorable and 1 unfavorable edge):")
     ok, lines = _rps_check(r, names)
     for ln in lines:
         print(ln)

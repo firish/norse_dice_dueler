@@ -86,7 +86,168 @@ def _co6_odin_burst_gp(state, player_num: int, god_powers: dict) -> tuple[str, i
         return ("GP_ODINS_INSIGHT", 2)
     return None
 
+
+def _co4_bridge_burst_gp(state, player_num: int, god_powers: dict) -> tuple[str, int] | None:
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    arrows = player.dice_faces.count("FACE_ARROW")
+    axes = player.dice_faces.count("FACE_AXE")
+    opp_shields = opponent.dice_faces.count("FACE_SHIELD")
+    opp_helmets = opponent.dice_faces.count("FACE_HELMET")
+    unblocked_arrows = max(0, arrows - opp_shields)
+    blocked_hits = min(arrows, opp_shields) + min(axes, opp_helmets)
+
+    if blocked_hits >= 2:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout:
+            for t in (0, 1, 2):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+
+    if unblocked_arrows >= 2:
+        gp = god_powers.get("GP_SKADIS_VOLLEY")
+        if gp and "GP_SKADIS_VOLLEY" in player.gp_loadout:
+            for t in (0, 1, 2):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_SKADIS_VOLLEY", t)
+
+    if opponent.hp <= 9:
+        gp = god_powers.get("GP_FENRIRS_BITE")
+        if gp and "GP_FENRIRS_BITE" in player.gp_loadout:
+            for t in (0, 1, 2):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_FENRIRS_BITE", t)
+    return None
+
+
+def _a5_bank_breaker_gp(state, player_num: int, god_powers: dict) -> tuple[str, int] | None:
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    axes = player.dice_faces.count("FACE_AXE")
+    arrows = player.dice_faces.count("FACE_ARROW")
+    opp_helmets = opponent.dice_faces.count("FACE_HELMET")
+    opp_shields = opponent.dice_faces.count("FACE_SHIELD")
+    blocked_hits = min(axes, opp_helmets) + min(arrows, opp_shields)
+    total_hits = axes + arrows
+
+    if opponent.tokens >= 4:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout and total_hits >= 2 and blocked_hits >= 1:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+
+        gp = god_powers.get("GP_FENRIRS_BITE")
+        if gp and "GP_FENRIRS_BITE" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_FENRIRS_BITE", t)
+
+    gp = god_powers.get("GP_SURTRS_FLAME")
+    if gp and "GP_SURTRS_FLAME" in player.gp_loadout and (total_hits >= 3 or opponent.hp <= 8):
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_SURTRS_FLAME", t)
+
+    gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+    if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout and blocked_hits >= 2:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_HEIMDALLRS_WATCH", t)
+
+    gp = god_powers.get("GP_FENRIRS_BITE")
+    if gp and "GP_FENRIRS_BITE" in player.gp_loadout and opponent.hp <= 10:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_FENRIRS_BITE", t)
+    return None
+
+
+def _a6_econ_crack_gp(state, player_num: int, god_powers: dict) -> tuple[str, int] | None:
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    axes = player.dice_faces.count("FACE_AXE")
+    arrows = player.dice_faces.count("FACE_ARROW")
+    opp_helmets = opponent.dice_faces.count("FACE_HELMET")
+    opp_shields = opponent.dice_faces.count("FACE_SHIELD")
+    blocked_hits = min(axes, opp_helmets) + min(arrows, opp_shields)
+    total_hits = axes + arrows
+
+    if opponent.tokens >= 2 and total_hits >= 2:
+        gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+        if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout and blocked_hits >= 1:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_HEIMDALLRS_WATCH", t)
+
+    if opponent.tokens >= 4:
+        gp = god_powers.get("GP_FENRIRS_BITE")
+        if gp and "GP_FENRIRS_BITE" in player.gp_loadout:
+            for t in (2, 1, 0):
+                if player.tokens >= gp.tiers[t].cost:
+                    return ("GP_FENRIRS_BITE", t)
+
+    gp = god_powers.get("GP_SURTRS_FLAME")
+    if gp and "GP_SURTRS_FLAME" in player.gp_loadout and (total_hits >= 2 or opponent.hp <= 8):
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_SURTRS_FLAME", t)
+
+    gp = god_powers.get("GP_HEIMDALLRS_WATCH")
+    if gp and "GP_HEIMDALLRS_WATCH" in player.gp_loadout and blocked_hits >= 2:
+        for t in (2, 1, 0):
+            if player.tokens >= gp.tiers[t].cost:
+                return ("GP_HEIMDALLRS_WATCH", t)
+    return None
+
+
+def _e8_reactive_frigg_gp(state, player_num: int, god_powers: dict) -> tuple[str, int] | None:
+    player = state.p1 if player_num == 1 else state.p2
+    opponent = state.p2 if player_num == 1 else state.p1
+    opp_axes = opponent.dice_faces.count("FACE_AXE")
+    opp_arrows = opponent.dice_faces.count("FACE_ARROW")
+    player_helmets = player.dice_faces.count("FACE_HELMET")
+    player_shields = player.dice_faces.count("FACE_SHIELD")
+    opp_damage = max(0, opp_axes - player_helmets) + max(0, opp_arrows - player_shields)
+    player_hands = player.dice_faces.count("FACE_HAND") + player.dice_faces.count("FACE_HAND_BORDERED")
+
+    if "GP_FRIGGS_VEIL" in player.gp_loadout:
+        gp = god_powers.get("GP_FRIGGS_VEIL")
+        if gp and player.tokens >= gp.tiers[0].cost:
+            if (
+                "GP_SKADIS_VOLLEY" in opponent.gp_loadout
+                or "GP_ODINS_INSIGHT" in opponent.gp_loadout
+                or "GP_HEIMDALLRS_WATCH" in opponent.gp_loadout
+            ):
+                if opponent.tokens >= 5 or opp_damage >= 2:
+                    return ("GP_FRIGGS_VEIL", 0)
+
+    if "GP_MJOLNIRS_WRATH" in player.gp_loadout:
+        gp = god_powers.get("GP_MJOLNIRS_WRATH")
+        if gp and player.tokens >= gp.tiers[0].cost:
+            if opponent.hp <= 8 or player.tokens >= 8:
+                return ("GP_MJOLNIRS_WRATH", 0)
+
+    if "GP_FREYAS_BLESSING" in player.gp_loadout:
+        gp = god_powers.get("GP_FREYAS_BLESSING")
+        if gp and player.tokens >= gp.tiers[0].cost and player_hands >= 2:
+            return ("GP_FREYAS_BLESSING", 0)
+
+    if "GP_MJOLNIRS_WRATH" in player.gp_loadout:
+        gp = god_powers.get("GP_MJOLNIRS_WRATH")
+        if gp and player.tokens >= gp.tiers[0].cost:
+            return ("GP_MJOLNIRS_WRATH", 0)
+
+    return None
+
 ARCHETYPES = ("AGGRO", "CONTROL", "ECONOMY", "COMBO")
+RECOMMENDED_PROFILE_ID = "MIXED_A"
+RECOMMENDED_BASELINE_IDS = {
+    "AGGRO": "A_CAN4",
+    "CONTROL": "C_CAN4",
+    "ECONOMY": "E_CAN1",
+    "COMBO": "CO_CAN4",
+}
 _CANDIDATES: dict[str, list["CanonicalCandidate"]] = {}
 _PROFILES: dict[str, "TuningProfile"] = {}
 
@@ -302,6 +463,26 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
                 dice_loadout=["DIE_BERSERKER"] * 3 + ["DIE_GAMBLER"] * 2 + ["DIE_WARRIOR"],
                 gp_loadout=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH"),
             ),
+            CanonicalCandidate(
+                id="A_CAN5",
+                archetype="AGGRO",
+                name="Economy Punish",
+                agent_cls=AggroAgent,
+                agent_kwargs={
+                    "gp_select_fn": _a5_bank_breaker_gp,
+                },
+                dice_loadout=["DIE_BERSERKER"] * 4 + ["DIE_GAMBLER"] + ["DIE_WARRIOR"],
+                gp_loadout=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH"),
+            ),
+            CanonicalCandidate(
+                id="A_CAN6",
+                archetype="AGGRO",
+                name="Crackdown Blitz",
+                agent_cls=AggroAgent,
+                agent_kwargs={"gp_select_fn": _a6_econ_crack_gp},
+                dice_loadout=["DIE_BERSERKER"] * 3 + ["DIE_GAMBLER"] * 2 + ["DIE_WARRIOR"],
+                gp_loadout=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH"),
+            ),
         ],
         "CONTROL": [
             CanonicalCandidate(
@@ -325,15 +506,23 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
             CanonicalCandidate(
                 id="C_CAN3",
                 archetype="CONTROL",
-                name="Sustain Engine",
+                name="Sustain Guard",
                 agent_cls=ControlAgent,
                 agent_kwargs={
                     "keep_faces": frozenset({"FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED"}),
-                    "gp_priority_healthy": ("GP_FREYAS_BLESSING", "GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR"),
-                    "gp_priority_hurt": ("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FREYAS_BLESSING"),
+                    "gp_select_fn": _control_gp_select,
                 },
-                dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_SKALD"] * 2 + ["DIE_MISER"],
-                gp_loadout=("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FREYAS_BLESSING"),
+                dice_loadout=["DIE_WARDEN"] * 3 + ["DIE_SKALD"] * 2 + ["DIE_WARRIOR"],
+                gp_loadout=("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_FRIGGS_VEIL"),
+            ),
+            CanonicalCandidate(
+                id="C_CAN4",
+                archetype="CONTROL",
+                name="Frigg Midwall",
+                agent_cls=ControlAgent,
+                agent_kwargs={"gp_select_fn": _control_gp_select},
+                dice_loadout=["DIE_WARDEN"] * 2 + ["DIE_WARRIOR"] * 2 + ["DIE_SKALD"] * 2,
+                gp_loadout=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_FRIGGS_VEIL"),
             ),
         ],
         "ECONOMY": [
@@ -372,7 +561,7 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
                 agent_cls=EconomyAgent,
                 agent_kwargs={
                     "keep_faces": frozenset(
-                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET"}
                     ),
                     "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
                     "tier_order": (0, 1, 2),
@@ -385,19 +574,20 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
             CanonicalCandidate(
                 id="E_CAN4",
                 archetype="ECONOMY",
-                name="Skald Guarded",
+                name="Skald Tempo Bank",
                 agent_cls=EconomyAgent,
                 agent_kwargs={
+                    "gp_select_fn": _economy_gp_select,
                     "keep_faces": frozenset(
-                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET"}
                     ),
-                    "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_AEGIS_OF_BALDR"),
+                    "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
                     "tier_order": (0, 1, 2),
                     "token_threshold": 4,
-                    "frigg_threshold": 99,
+                    "frigg_threshold": 8,
                 },
-                dice_loadout=["DIE_SKALD"] * 2 + ["DIE_MISER"] * 2 + ["DIE_WARDEN"] * 2,
-                gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_AEGIS_OF_BALDR"),
+                dice_loadout=["DIE_SKALD"] * 3 + ["DIE_MISER"] + ["DIE_WARRIOR"] * 2,
+                gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
             ),
             CanonicalCandidate(
                 id="E_CAN5",
@@ -406,12 +596,54 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
                 agent_cls=EconomyAgent,
                 agent_kwargs={
                     "keep_faces": frozenset(
-                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET"}
                     ),
                     "gp_priority": ("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
                     "tier_order": (0, 1, 2),
                     "token_threshold": 4,
                     "frigg_threshold": 8,
+                },
+                dice_loadout=["DIE_SKALD"] * 2 + ["DIE_MISER"] * 2 + ["DIE_WARRIOR"] * 2,
+                gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
+            ),
+            CanonicalCandidate(
+                id="E_CAN6",
+                archetype="ECONOMY",
+                name="Tempered Guard Bank",
+                agent_cls=EconomyAgent,
+                agent_kwargs={
+                    "gp_select_fn": _economy_gp_select,
+                    "keep_faces": frozenset(
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}
+                    ),
+                },
+                dice_loadout=["DIE_SKALD"] * 2 + ["DIE_MISER"] * 2 + ["DIE_WARRIOR"] * 2,
+                gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_AEGIS_OF_BALDR"),
+            ),
+            CanonicalCandidate(
+                id="E_CAN7",
+                archetype="ECONOMY",
+                name="Active Guard Bank",
+                agent_cls=EconomyAgent,
+                agent_kwargs={
+                    "gp_select_fn": _economy_gp_select,
+                    "keep_faces": frozenset(
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD"}
+                    ),
+                },
+                dice_loadout=["DIE_SKALD"] * 3 + ["DIE_WARRIOR"] * 2 + ["DIE_MISER"],
+                gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_AEGIS_OF_BALDR"),
+            ),
+            CanonicalCandidate(
+                id="E_CAN8",
+                archetype="ECONOMY",
+                name="Reactive Frigg Bank",
+                agent_cls=EconomyAgent,
+                agent_kwargs={
+                    "gp_select_fn": _e8_reactive_frigg_gp,
+                    "keep_faces": frozenset(
+                        {"FACE_HAND_BORDERED", "FACE_AXE", "FACE_ARROW", "FACE_HELMET"}
+                    ),
                 },
                 dice_loadout=["DIE_SKALD"] * 2 + ["DIE_MISER"] * 2 + ["DIE_WARRIOR"] * 2,
                 gp_loadout=("GP_MJOLNIRS_WRATH", "GP_FREYAS_BLESSING", "GP_FRIGGS_VEIL"),
@@ -452,6 +684,18 @@ def _build_candidates() -> dict[str, list[CanonicalCandidate]]:
                 },
                 dice_loadout=["DIE_HUNTER"] * 4 + ["DIE_WARRIOR"] * 2,
                 gp_loadout=("GP_SKADIS_VOLLEY", "GP_FENRIRS_BITE", "GP_NJORDS_TIDE"),
+            ),
+            CanonicalCandidate(
+                id="CO_CAN4",
+                archetype="COMBO",
+                name="Bridge Burst",
+                agent_cls=ComboAgent,
+                agent_kwargs={
+                    "gp_select_fn": _co4_bridge_burst_gp,
+                    "keep_faces": frozenset({"FACE_ARROW", "FACE_HAND_BORDERED", "FACE_AXE"}),
+                },
+                dice_loadout=["DIE_HUNTER"] * 2 + ["DIE_GAMBLER"] * 2 + ["DIE_WARRIOR"] * 2,
+                gp_loadout=("GP_SKADIS_VOLLEY", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH"),
             ),
         ],
     }
@@ -663,7 +907,7 @@ def main() -> None:
     parser.add_argument(
         "--tune-profile",
         type=str,
-        default="BASE",
+        default=RECOMMENDED_PROFILE_ID,
         choices=list_profiles(),
         help="Named GP tuning profile to evaluate.",
     )
