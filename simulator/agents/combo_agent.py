@@ -12,9 +12,8 @@ Strategy: build arrow synergy with Skadi's Volley.
     - Odin for token gain at T3 (simplified info -> tokens).
   Skadi activation condition: only use if 2+ arrows currently showing.
 
-Loadout (from CLAUDE.md Section 9):
-  Dice: 4x Hunter + 2x Gambler
-  GPs:  Skadi's Volley, Njordr's Tide, Odin's Insight
+This class provides the baseline archetype behavior. Experiment layers can
+override keep logic or GP choice with hooks without rewriting the core agent.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from typing import Callable
 
 import numpy as np
 
-from simulator.agents import Agent
+from simulator.agents import Agent, choose_keep_by_faces, try_gp
 from simulator.game_state import GameState
 from simulator.god_powers import load_god_powers
 
@@ -41,6 +40,7 @@ class ComboAgent(Agent):
         gp_priority: tuple[str, ...] | None = None,
         tier_order: tuple[int, ...] | None = None,
         min_arrows_for_skadi: int | None = None,
+        keep_select_fn: Callable | None = None,
         gp_select_fn: Callable | None = None,
     ) -> None:
         self.rng = rng or np.random.default_rng()
@@ -49,14 +49,14 @@ class ComboAgent(Agent):
         self.gp_priority = gp_priority if gp_priority is not None else _DEFAULT_GP_PRIORITY
         self.tier_order = tier_order if tier_order is not None else _DEFAULT_TIER_ORDER
         self.min_arrows_for_skadi = min_arrows_for_skadi if min_arrows_for_skadi is not None else _DEFAULT_MIN_ARROWS
+        self.keep_select_fn = keep_select_fn
         self.gp_select_fn = gp_select_fn
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
         player = state.p1 if player_num == 1 else state.p2
-        return frozenset(
-            i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
-            if not kept and face in self.keep_faces
-        )
+        if self.keep_select_fn is not None:
+            return self.keep_select_fn(state, player_num)
+        return choose_keep_by_faces(player, self.keep_faces)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         player = state.p1 if player_num == 1 else state.p2
@@ -70,7 +70,7 @@ class ComboAgent(Agent):
         unblocked = max(0, arrows - opp_shields)
 
         if unblocked >= self.min_arrows_for_skadi:
-            choice = self._try_gp(player, "GP_SKADIS_VOLLEY")
+            choice = try_gp(player, self._god_powers, "GP_SKADIS_VOLLEY", self.tier_order)
             if choice is not None:
                 return choice
 
@@ -83,24 +83,13 @@ class ComboAgent(Agent):
                     if player.tokens >= gp.tiers[2].cost:
                         return (gp_id, 2)
                 continue
-            choice = self._try_gp(player, gp_id)
+            choice = try_gp(player, self._god_powers, gp_id, self.tier_order)
             if choice is not None:
                 return choice
 
         if arrows > 0:
-            choice = self._try_gp(player, "GP_SKADIS_VOLLEY")
+            choice = try_gp(player, self._god_powers, "GP_SKADIS_VOLLEY", self.tier_order)
             if choice is not None:
                 return choice
 
-        return None
-
-    def _try_gp(self, player, gp_id: str) -> tuple[str, int] | None:
-        if gp_id not in player.gp_loadout:
-            return None
-        gp = self._god_powers.get(gp_id)
-        if gp is None:
-            return None
-        for tier_idx in self.tier_order:
-            if player.tokens >= gp.tiers[tier_idx].cost:
-                return (gp_id, tier_idx)
         return None

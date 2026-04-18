@@ -7,8 +7,8 @@
       {
         "tier": "T1",
         "cost": 6,
-        "effect": "Deal 2 direct damage (unblockable by dice, blockable by Aegis).",
-        "damage": 2
+        "effect": "Deal 4 direct damage (unblockable by dice, blockable by Aegis).",
+        "damage": 4
       },
       {
         "tier": "T2",
@@ -151,7 +151,7 @@
     "tiers": [
       {
         "tier": "T1",
-        "cost": 4,
+        "cost": 2,
         "effect": "Block next 3 damage from any source this round.",
         "damage": null,
         "block_amount": 3

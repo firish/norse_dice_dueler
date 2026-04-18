@@ -102,6 +102,12 @@ class GameEngine:
         p2_gp_ids: tuple[str, ...] = (),
         enable_thorns: bool = True,
         enable_token_shield: bool = True,
+        steal_hp_penalty_threshold: int | None = None,
+        steal_hp_penalty: int = 0,
+        hoard_hp_penalty_threshold: int | None = None,
+        hoard_hp_penalty: int = 0,
+        njordr_reroll_cap: int | None = None,
+        god_powers: dict[str, GodPower] | None = None,
     ) -> None:
         assert len(p1_die_types) == NUM_DICE, f"P1 loadout must have {NUM_DICE} dice"
         assert len(p2_die_types) == NUM_DICE, f"P2 loadout must have {NUM_DICE} dice"
@@ -115,8 +121,15 @@ class GameEngine:
         # token_shield: every 4 tokens held reduces incoming dice damage by 1.
         self.enable_thorns = enable_thorns
         self.enable_token_shield = enable_token_shield
+        self.steal_hp_penalty_threshold = steal_hp_penalty_threshold
+        self.steal_hp_penalty = steal_hp_penalty
+        self.hoard_hp_penalty_threshold = hoard_hp_penalty_threshold
+        self.hoard_hp_penalty = hoard_hp_penalty
+        self.njordr_reroll_cap = njordr_reroll_cap
         # Load GP definitions once; empty if no GPs in either loadout.
-        if p1_gp_ids or p2_gp_ids:
+        if god_powers is not None:
+            self._god_powers = god_powers
+        elif p1_gp_ids or p2_gp_ids:
             self._god_powers = load_god_powers()
         else:
             self._god_powers: dict = {}
@@ -621,11 +634,17 @@ class GameEngine:
         new_p1_faces = p1.dice_faces
         new_p2_faces = p2.dice_faces
         if not p1_cancelled and p1_gp_id == "GP_NJORDS_TIDE" and p1_tier is not None:
-            new_p1_faces = self._njordr_reroll(p1.dice_faces, p1_tier.reroll_count, self.p1_die_types)
-            events.append(GameEvent("njordr_reroll", {"player": 1, "count": p1_tier.reroll_count}))
+            reroll_count = p1_tier.reroll_count
+            if self.njordr_reroll_cap is not None:
+                reroll_count = min(reroll_count, self.njordr_reroll_cap)
+            new_p1_faces = self._njordr_reroll(p1.dice_faces, reroll_count, self.p1_die_types)
+            events.append(GameEvent("njordr_reroll", {"player": 1, "count": reroll_count}))
         if not p2_cancelled and p2_gp_id == "GP_NJORDS_TIDE" and p2_tier is not None:
-            new_p2_faces = self._njordr_reroll(p2.dice_faces, p2_tier.reroll_count, self.p2_die_types)
-            events.append(GameEvent("njordr_reroll", {"player": 2, "count": p2_tier.reroll_count}))
+            reroll_count = p2_tier.reroll_count
+            if self.njordr_reroll_cap is not None:
+                reroll_count = min(reroll_count, self.njordr_reroll_cap)
+            new_p2_faces = self._njordr_reroll(p2.dice_faces, reroll_count, self.p2_die_types)
+            events.append(GameEvent("njordr_reroll", {"player": 2, "count": reroll_count}))
 
         # --- Apply all changes ---
         p1_new_hp = max(0, p1.hp - final_dmg_to_p1 + p1_heal)
@@ -713,17 +732,31 @@ class GameEngine:
         p1_final = max(0, p1_after_gen + p1_steal - p2_steal)
         p2_final = max(0, p2_after_gen + p2_steal - p1_steal)
 
+        p1_hp_penalty = 0
+        p2_hp_penalty = 0
+        if self.steal_hp_penalty_threshold is not None and self.steal_hp_penalty > 0:
+            if p1_steal >= self.steal_hp_penalty_threshold:
+                p1_hp_penalty += self.steal_hp_penalty
+            if p2_steal >= self.steal_hp_penalty_threshold:
+                p2_hp_penalty += self.steal_hp_penalty
+        if self.hoard_hp_penalty_threshold is not None and self.hoard_hp_penalty > 0:
+            if p1_final >= self.hoard_hp_penalty_threshold:
+                p1_hp_penalty += self.hoard_hp_penalty
+            if p2_final >= self.hoard_hp_penalty_threshold:
+                p2_hp_penalty += self.hoard_hp_penalty
+
         new_state = replace(
             state,
             phase=GamePhase.END_CHECK,
-            p1=replace(p1, tokens=p1_final),
-            p2=replace(p2, tokens=p2_final),
+            p1=replace(p1, tokens=p1_final, hp=max(0, p1.hp - p1_hp_penalty)),
+            p2=replace(p2, tokens=p2_final, hp=max(0, p2.hp - p2_hp_penalty)),
         )
         return new_state, [
             GameEvent("tokens", {
                 "p1_generated": p1_bordered, "p2_generated": p2_bordered,
                 "p1_stole": p1_steal,        "p2_stole": p2_steal,
                 "p1_final": p1_final,        "p2_final": p2_final,
+                "p1_hp_penalty": p1_hp_penalty, "p2_hp_penalty": p2_hp_penalty,
             })
         ]
 

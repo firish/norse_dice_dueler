@@ -11,7 +11,7 @@ Agent roster (build order from CLAUDE.md section 14):
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Mapping
 
 if TYPE_CHECKING:
     from simulator.game_state import GameState
@@ -44,3 +44,40 @@ class Agent:
         Base class always passes - subclasses override to activate GPs.
         """
         return None
+
+
+def choose_keep_by_faces(player, keep_faces: frozenset[str]) -> frozenset[int]:
+    """Keep every currently unlocked die whose face matches the keep set."""
+    return frozenset(
+        i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
+        if not kept and face in keep_faces
+    )
+
+
+def try_gp(player, god_powers: Mapping[str, object], gp_id: str, tier_order: Iterable[int]) -> tuple[str, int] | None:
+    """Return the first affordable tier for a GP, or None if it cannot be cast."""
+    if gp_id not in player.gp_loadout:
+        return None
+
+    gp = god_powers.get(gp_id)
+    if gp is None:
+        return None
+
+    for tier_idx in tier_order:
+        if player.tokens >= gp.tiers[tier_idx].cost:
+            return (gp_id, tier_idx)
+    return None
+
+
+def first_affordable_gp(
+    player,
+    god_powers: Mapping[str, object],
+    gp_priority: Iterable[str],
+    tier_order: Iterable[int],
+) -> tuple[str, int] | None:
+    """Return the first affordable GP from a priority list."""
+    for gp_id in gp_priority:
+        choice = try_gp(player, god_powers, gp_id, tier_order)
+        if choice is not None:
+            return choice
+    return None

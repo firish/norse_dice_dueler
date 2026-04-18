@@ -2,5 +2,6 @@
 .claude/settings.json
 .claude/settings.local.json
 
-# Cache
-*__pycache__
+# Python cache
+__pycache__/
+*.py[cod]

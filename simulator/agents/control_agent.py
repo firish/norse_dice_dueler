@@ -10,9 +10,8 @@ Strategy: survive to round 8+, outlast opponent with defense and healing.
     Healthy: Tyr (offense+defense) > Aegis > Eir
     Hurt:    Eir (heal) > Aegis > Tyr
 
-Loadout:
-  Dice: 3x Warden + 2x Huskarl + 1x Skald
-  GPs:  Aegis of Baldr, Eir's Mercy, Tyr's Judgment
+This class provides the baseline archetype behavior. Experiment layers can
+override keep logic or GP choice with hooks without rewriting the core agent.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from typing import Callable
 
 import numpy as np
 
-from simulator.agents import Agent
+from simulator.agents import Agent, choose_keep_by_faces, first_affordable_gp
 from simulator.game_state import GameState
 from simulator.god_powers import load_god_powers
 
@@ -44,6 +43,7 @@ class ControlAgent(Agent):
         gp_priority_hurt: tuple[str, ...] | None = None,
         hp_threshold: int | None = None,
         tier_order: tuple[int, ...] | None = None,
+        keep_select_fn: Callable | None = None,
         gp_select_fn: Callable | None = None,
     ) -> None:
         self.rng = rng or np.random.default_rng()
@@ -53,14 +53,14 @@ class ControlAgent(Agent):
         self.gp_priority_hurt = gp_priority_hurt if gp_priority_hurt is not None else _DEFAULT_GP_HURT
         self.hp_threshold = hp_threshold if hp_threshold is not None else _DEFAULT_HP_THRESHOLD
         self.tier_order = tier_order if tier_order is not None else _DEFAULT_TIER_ORDER
+        self.keep_select_fn = keep_select_fn
         self.gp_select_fn = gp_select_fn
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
         player = state.p1 if player_num == 1 else state.p2
-        return frozenset(
-            i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
-            if not kept and face in self.keep_faces
-        )
+        if self.keep_select_fn is not None:
+            return self.keep_select_fn(state, player_num)
+        return choose_keep_by_faces(player, self.keep_faces)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         player = state.p1 if player_num == 1 else state.p2
@@ -73,14 +73,4 @@ class ControlAgent(Agent):
         else:
             priority = self.gp_priority_healthy
 
-        for gp_id in priority:
-            if gp_id not in player.gp_loadout:
-                continue
-            gp = self._god_powers.get(gp_id)
-            if gp is None:
-                continue
-            for tier_idx in self.tier_order:
-                if player.tokens >= gp.tiers[tier_idx].cost:
-                    return (gp_id, tier_idx)
-
-        return None
+        return first_affordable_gp(player, self._god_powers, priority, self.tier_order)
