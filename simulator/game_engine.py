@@ -387,26 +387,42 @@ class GameEngine:
         p1_unblockable, p1_dmg_red = self._get_heimdallr_buffs(p1)
         p2_unblockable, p2_dmg_red = self._get_heimdallr_buffs(p2)
 
-        dmg_to_p2, p2_blocks = self._calc_dice_damage(p1_axes, p1_arrows, p2_helmets, p2_shields, p1_unblockable)
-        dmg_to_p1, p1_blocks = self._calc_dice_damage(p2_axes, p2_arrows, p1_helmets, p1_shields, p2_unblockable)
+        dmg_to_p2, p2_blocks, p2_baxes, p2_barrows = self._calc_dice_damage(p1_axes, p1_arrows, p2_helmets, p2_shields, p1_unblockable)
+        dmg_to_p1, p1_blocks, p1_baxes, p1_barrows = self._calc_dice_damage(p2_axes, p2_arrows, p1_helmets, p1_shields, p2_unblockable)
 
         dmg_to_p1 = max(0, dmg_to_p1 - p1_dmg_red)
         dmg_to_p2 = max(0, dmg_to_p2 - p2_dmg_red)
 
+        # Token-threshold defense (uncapped): every 4 tokens held reduces
+        # incoming dice damage by 1. Checked at start of combat (post-GP payment),
+        # so spending tokens on a GP reduces your shield - real tradeoff.
+        p1_token_shield = p1.tokens // 4
+        p2_token_shield = p2.tokens // 4
+        dmg_to_p1 = max(0, dmg_to_p1 - p1_token_shield)
+        dmg_to_p2 = max(0, dmg_to_p2 - p2_token_shield)
+
         # Successful dice blocks generate tokens (1 per 2 blocks, round up).
-        p1_tokens = p1.tokens + (p1_blocks + 1) // 2
-        p2_tokens = p2.tokens + (p2_blocks + 1) // 2
+        # p1_tokens = p1.tokens + (p1_blocks + 1) // 2
+        # p2_tokens = p2.tokens + (p2_blocks + 1) // 2
+        p1_tokens = p1.tokens
+        p2_tokens = p2.tokens
+
+        # Thorns: every 2 blocked attacks (any type) deal 1 damage back to the attacker.
+        # 2 blocks -> 1, 4 -> 2, 6 -> 3.
+        thorns_to_p1 = (p2_baxes + p2_barrows) // 2
+        thorns_to_p2 = (p1_baxes + p1_barrows) // 2
 
         new_state = replace(
             state,
             phase=GamePhase.GOD_RESOLVE,
-            p1=replace(p1, hp=p1.hp - dmg_to_p1, tokens=p1_tokens),
-            p2=replace(p2, hp=p2.hp - dmg_to_p2, tokens=p2_tokens),
+            p1=replace(p1, hp=p1.hp - dmg_to_p1 - thorns_to_p1, tokens=p1_tokens),
+            p2=replace(p2, hp=p2.hp - dmg_to_p2 - thorns_to_p2, tokens=p2_tokens),
         )
         return new_state, [
             GameEvent("combat", {
                 "dmg_to_p1": dmg_to_p1, "dmg_to_p2": dmg_to_p2,
                 "p1_block_tokens": p1_blocks, "p2_block_tokens": p2_blocks,
+                "thorns_to_p1": thorns_to_p1, "thorns_to_p2": thorns_to_p2,
             })
         ]
 
@@ -427,19 +443,24 @@ class GameEngine:
     def _calc_dice_damage(
         axes: int, arrows: int, opp_helmets: int, opp_shields: int,
         unblockable: int,
-    ) -> tuple[int, int]:
+    ) -> tuple[int, int, int, int]:
         """Calculate dice combat damage and successful blocks.
 
-        Returns (damage, blocks_by_defender).
+        Returns (damage, effective_blocks, blocked_axes, blocked_arrows).
+        Bypasses are distributed from axes first.
         """
         if unblockable >= axes + arrows:
-            return axes + arrows, 0
-        total_attacks = axes + arrows
-        total_blocks = min(axes, opp_helmets) + min(arrows, opp_shields)
-        normal_dmg = total_attacks - total_blocks
-        bypassed = min(unblockable, total_blocks)
-        effective_blocks = total_blocks - bypassed
-        return normal_dmg + bypassed, effective_blocks
+            return axes + arrows, 0, 0, 0
+        raw_blocked_axes   = min(axes, opp_helmets)
+        raw_blocked_arrows = min(arrows, opp_shields)
+        bypassed_axes   = min(unblockable, raw_blocked_axes)
+        bypassed_arrows = min(unblockable - bypassed_axes, raw_blocked_arrows)
+        eff_blocked_axes   = raw_blocked_axes - bypassed_axes
+        eff_blocked_arrows = raw_blocked_arrows - bypassed_arrows
+        effective_blocks   = eff_blocked_axes + eff_blocked_arrows
+        bypassed           = bypassed_axes + bypassed_arrows
+        normal_dmg         = axes + arrows - (raw_blocked_axes + raw_blocked_arrows)
+        return normal_dmg + bypassed, effective_blocks, eff_blocked_axes, eff_blocked_arrows
 
     def _phase_god_resolve(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         """
@@ -666,6 +687,16 @@ class GameEngine:
         # Step 8: simultaneous theft (capped at what the opponent had post-generation).
         p1_steal = min(p1_bordered + p1_plain, p2_after_gen)
         p2_steal = min(p2_bordered + p2_plain, p1_after_gen)
+
+        # Plain Hand no-steal bonus: COMMENTED OUT for isolated token-threshold test.
+        # p1_bordered_steal = min(p1_bordered, p2_after_gen)
+        # p2_bordered_steal = min(p2_bordered, p1_after_gen)
+        # p1_plain_steal = min(p1_plain, p2_after_gen - p1_bordered_steal)
+        # p2_plain_steal = min(p2_plain, p1_after_gen - p2_bordered_steal)
+        # p1_plain_bonus = p1_plain - p1_plain_steal
+        # p2_plain_bonus = p2_plain - p2_plain_steal
+        # p1_steal = p1_bordered_steal + p1_plain_steal
+        # p2_steal = p2_bordered_steal + p2_plain_steal
 
         p1_final = max(0, p1_after_gen + p1_steal - p2_steal)
         p2_final = max(0, p2_after_gen + p2_steal - p1_steal)

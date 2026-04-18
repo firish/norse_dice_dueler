@@ -150,10 +150,10 @@ def run_simulation(
 def _status(value: float, green_lo: float, green_hi: float,
             yellow_lo: float, yellow_hi: float) -> str:
     if green_lo <= value <= green_hi:
-        return "GREEN  ✓"
+        return "GREEN  ok"
     if yellow_lo <= value <= yellow_hi:
         return "YELLOW !"
-    return "RED    ✗"
+    return "RED    X"
 
 
 def print_results(r: SimulationResults) -> None:
@@ -1230,6 +1230,184 @@ def print_mega_results(results: dict[str, IntraResult]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Variant scoring vs target matrix (CLAUDE.md §9)
+# ---------------------------------------------------------------------------
+
+# The intended R-P-S matchup matrix. rows = P1 archetype, cols = P2 archetype.
+_TARGET_MATRIX: dict[tuple[str, str], float] = {
+    ("AGGRO",   "AGGRO"):   0.50, ("AGGRO",   "CONTROL"): 0.35,
+    ("AGGRO",   "ECONOMY"): 0.62, ("AGGRO",   "COMBO"):   0.58,
+    ("CONTROL", "AGGRO"):   0.65, ("CONTROL", "CONTROL"): 0.50,
+    ("CONTROL", "ECONOMY"): 0.38, ("CONTROL", "COMBO"):   0.45,
+    ("ECONOMY", "AGGRO"):   0.38, ("ECONOMY", "CONTROL"): 0.62,
+    ("ECONOMY", "ECONOMY"): 0.50, ("ECONOMY", "COMBO"):   0.55,
+    ("COMBO",   "AGGRO"):   0.42, ("COMBO",   "CONTROL"): 0.55,
+    ("COMBO",   "ECONOMY"): 0.45, ("COMBO",   "COMBO"):   0.50,
+}
+
+
+@dataclass
+class VariantScore:
+    variant: str
+    archetype: str
+    wr_vs: dict[str, float]   # opponent archetype -> avg decisive winrate
+    target_deviation: float   # sum of squared (actual - target) across 4 cells
+    floor: float              # worst single matchup winrate
+    field_avg: float          # mean winrate across all 23 opponents
+
+
+def run_scored_tournament(
+    n_games: int = 500,
+    seed: int = 42,
+) -> dict[tuple[str, str], L2MatchupResult]:
+    """24x24 round-robin that keeps PER-MATCHUP W/L/D (not just aggregates).
+    Needed because scoring requires slicing by opponent archetype, which the
+    existing mega tournament throws away when it sums into IntraResult.
+    """
+    die_types = load_die_types()
+    variants = _build_variants()
+    vnames = list(variants.keys())
+    per_matchup: dict[tuple[str, str], L2MatchupResult] = {}
+
+    t0 = time.perf_counter()
+    total = len(vnames) * (len(vnames) - 1)
+    print(f"  Scored tournament: {len(vnames)} variants, {total} matchups, "
+          f"{n_games} games each ({total * n_games:,} total)...")
+
+    for i, v1_name in enumerate(vnames):
+        for j, v2_name in enumerate(vnames):
+            if i == j:
+                continue
+            rng = np.random.default_rng(seed)
+            v1 = variants[v1_name]
+            v2 = variants[v2_name]
+
+            p1_dice = [die_types[d] for d in v1.dice_loadout]
+            p2_dice = [die_types[d] for d in v2.dice_loadout]
+
+            engine = GameEngine(
+                p1_dice, p2_dice, rng,
+                p1_gp_ids=v1.gp_loadout,
+                p2_gp_ids=v2.gp_loadout,
+            )
+            p1_agent = v1.agent_cls(rng=rng, **v1.agent_kwargs)
+            p2_agent = v2.agent_cls(rng=rng, **v2.agent_kwargs)
+
+            m = L2MatchupResult(p1_arch=v1_name, p2_arch=v2_name, n_games=n_games)
+            for _ in range(n_games):
+                final_state, _ = engine.run_game(p1_agent, p2_agent)
+                winner = final_state.winner
+                if winner == 1:
+                    m.p1_wins += 1
+                elif winner == 2:
+                    m.p2_wins += 1
+                else:
+                    m.draws += 1
+            per_matchup[(v1_name, v2_name)] = m
+
+    print(f"  Completed in {time.perf_counter() - t0:.1f}s")
+    return per_matchup
+
+
+def score_variants(
+    per_matchup: dict[tuple[str, str], L2MatchupResult],
+) -> list[VariantScore]:
+    """For each variant, compute four metrics:
+
+    1. wr_vs[arch] - avg decisive winrate when this variant faces ANY variant
+       of `arch`. Collapses 6 individual matchups into one aggregate number
+       per opponent archetype, smoothing out any single weird build.
+
+    2. target_deviation - sum of squared (wr_vs[arch] - target) across all 4
+       opponent archetypes. Uses CLAUDE.md §9's target matrix as the ideal
+       R-P-S pattern. Lower = closer to intended design. This is the primary
+       ranking metric.
+
+    3. floor - the worst individual matchup winrate (across all 23 non-mirror
+       opponents). Catches variants that look OK on average but get hard-
+       countered by one specific build. CLAUDE.md §9 says worst matchup
+       should be 35-65% to ship.
+
+    4. field_avg - plain mean winrate across all 23 matchups. Tiebreaker and
+       sanity check. A variant with field_avg far from 50% is overpowered
+       or underpowered overall, regardless of target fit.
+    """
+    variants = _build_variants()
+    scores: list[VariantScore] = []
+
+    for vid, v in variants.items():
+        # Collect this variant's winrates bucketed by opponent archetype.
+        by_arch: dict[str, list[float]] = {a: [] for a in ("AGGRO", "CONTROL", "ECONOMY", "COMBO")}
+        all_wrs: list[float] = []
+
+        for (v1, v2), m in per_matchup.items():
+            if v1 != vid:
+                continue
+            opp_arch = variants[v2].archetype
+            wr = m.p1_decisive_win_rate
+            by_arch[opp_arch].append(wr)
+            all_wrs.append(wr)
+
+        # Average per opponent archetype. Mirror bucket excludes self (only 5 opps).
+        wr_vs = {arch: (sum(wrs) / len(wrs) if wrs else 0.5)
+                 for arch, wrs in by_arch.items()}
+
+        # Squared distance from CLAUDE.md target row for this archetype.
+        deviation = sum(
+            (wr_vs[opp] - _TARGET_MATRIX[(v.archetype, opp)]) ** 2
+            for opp in ("AGGRO", "CONTROL", "ECONOMY", "COMBO")
+        )
+
+        scores.append(VariantScore(
+            variant=vid,
+            archetype=v.archetype,
+            wr_vs=wr_vs,
+            target_deviation=deviation,
+            floor=min(all_wrs) if all_wrs else 0.0,
+            field_avg=sum(all_wrs) / len(all_wrs) if all_wrs else 0.5,
+        ))
+
+    return scores
+
+
+def print_variant_scores(scores: list[VariantScore]) -> None:
+    variants = _build_variants()
+    sep = "=" * 92
+
+    print(f"\n{sep}")
+    print("  Variant Scores vs CLAUDE.md Target Matchup Matrix")
+    print("  Dev = sum of squared deviations from target row. Lower = better fit.")
+    print("  Floor = worst single matchup (C9: should be 35-65% to ship).")
+    print(sep)
+
+    by_arch: dict[str, list[VariantScore]] = {}
+    for s in scores:
+        by_arch.setdefault(s.archetype, []).append(s)
+
+    for arch in ("AGGRO", "CONTROL", "ECONOMY", "COMBO"):
+        if arch not in by_arch:
+            continue
+        ranked = sorted(by_arch[arch], key=lambda s: s.target_deviation)
+        tgt = {a: _TARGET_MATRIX[(arch, a)] for a in ("AGGRO", "CONTROL", "ECONOMY", "COMBO")}
+
+        print(f"\n  [{arch}] - Target: vA={tgt['AGGRO']:.0%}  vC={tgt['CONTROL']:.0%}  "
+              f"vE={tgt['ECONOMY']:.0%}  vCo={tgt['COMBO']:.0%}")
+        print(f"  {'Rank':<5} {'Variant':<25} {'vAggro':>7} {'vCtrl':>7} {'vEcon':>7} "
+              f"{'vCombo':>7} {'Floor':>7} {'FldAvg':>7} {'Dev':>7}")
+        print(f"  {'-'*86}")
+        for i, s in enumerate(ranked, 1):
+            v = variants[s.variant]
+            marker = "  <-- BEST" if i == 1 else ""
+            print(f"  {i:<5} {v.name:<25} "
+                  f"{s.wr_vs['AGGRO']:>6.1%} {s.wr_vs['CONTROL']:>6.1%} "
+                  f"{s.wr_vs['ECONOMY']:>6.1%} {s.wr_vs['COMBO']:>6.1%} "
+                  f"{s.floor:>6.1%} {s.field_avg:>6.1%} "
+                  f"{s.target_deviation:>6.3f}{marker}")
+
+    print(f"\n{sep}\n")
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -1243,7 +1421,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--tournament", type=str, default=None,
-        help="Run tournament: aggro, control, economy, combo, all (intra), mega (24x24 round-robin), or cross.",
+        help="Run tournament: aggro, control, economy, combo, all (intra), mega (24x24 round-robin), cross (validate a picked set), or score (rank all variants vs target matrix).",
+    )
+    parser.add_argument(
+        "--winners", type=str, default=None,
+        help="Comma-separated variant IDs for cross-validation (e.g. A4,C5,E5,Co6).",
     )
     parser.add_argument(
         "--games", type=int, default=10_000,
@@ -1268,8 +1450,18 @@ def main() -> None:
         elif t == "mega":
             res = run_mega_tournament(n_games=args.games, seed=args.seed)
             print_mega_results(res)
+        elif t == "score":
+            per_matchup = run_scored_tournament(n_games=args.games, seed=args.seed)
+            scores = score_variants(per_matchup)
+            print_variant_scores(scores)
         elif t == "cross":
-            print("Cross-validation: use run_cross_validation(['A1','C1','E1','Co1'], ...) from Python.")
+            if not args.winners:
+                print("Error: --winners required for cross. e.g. --winners A4,C5,E5,Co6")
+            else:
+                winner_ids = [w.strip() for w in args.winners.split(",")]
+                print(f"Running cross-validation: {winner_ids}, {args.games} games/matchup...")
+                res = run_cross_validation(winner_ids, n_games=args.games, seed=args.seed)
+                print_l2_results(res)
         elif t.upper() in ("AGGRO", "CONTROL", "ECONOMY", "COMBO"):
             res = run_intra_tournament(t.upper(), n_games=args.games, seed=args.seed)
             print_intra_results(res, t.upper())
