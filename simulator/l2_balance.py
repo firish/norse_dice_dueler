@@ -241,11 +241,11 @@ def _e8_reactive_frigg_gp(state, player_num: int, god_powers: dict) -> tuple[str
     return None
 
 ARCHETYPES = ("AGGRO", "CONTROL", "ECONOMY", "COMBO")
-RECOMMENDED_PROFILE_ID = "MIXED_A"
+RECOMMENDED_PROFILE_ID = "POLISH_V1"
 RECOMMENDED_BASELINE_IDS = {
-    "AGGRO": "A_CAN4",
-    "CONTROL": "C_CAN4",
-    "ECONOMY": "E_CAN1",
+    "AGGRO": "A_CAN1",
+    "CONTROL": "C_CAN1",
+    "ECONOMY": "E_CAN5",
     "COMBO": "CO_CAN4",
 }
 _CANDIDATES: dict[str, list["CanonicalCandidate"]] = {}
@@ -286,6 +286,7 @@ class PackageScore:
 class TuningProfile:
     id: str
     description: str
+    aegis_t1_cost: int = 4
     aegis_t1_block: int = 3
     frigg_t1_cost: int = 6
     mjolnir_t1_cost: int = 6
@@ -293,11 +294,20 @@ class TuningProfile:
     freyja_token_gains: tuple[int, int, int] = (3, 5, 8)
     heimdallr_t1_cost: int = 4
     skadi_t1_cost: int = 5
+    skadi_t1_arrow_bonus: int = 1
     surtr_t1_damage: int = 2
     fenrir_t1_cost: int = 5
+    eir_t1_cost: int = 5
+    eir_t1_heal: int = 2
+    tyr_t1_cost: int = 5
+    tyr_t1_damage: int = 2
+    tyr_t1_block: int = 2
     enable_token_shield: bool = True
     steal_hp_penalty_threshold: int | None = None
     steal_hp_penalty: int = 0
+    hoard_hp_penalty_threshold: int | None = None
+    hoard_hp_penalty: int = 0
+    unused_defense_token_ratio: int = 0
 
 
 def _build_tuning_profiles() -> dict[str, TuningProfile]:
@@ -362,6 +372,135 @@ def _build_tuning_profiles() -> dict[str, TuningProfile]:
             steal_hp_penalty_threshold=3,
             steal_hp_penalty=1,
         ),
+        # Polish iteration 1: cheaper Aegis so Control can actually afford
+        # it after being token-stolen by Economy. Leaves everything else at
+        # MIXED_A values.
+        "POLISH_V1": TuningProfile(
+            id="POLISH_V1",
+            description="MIXED_A with cheaper Aegis T1 (cost 3, block 5).",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+        ),
+        # Polish iteration 2: V1 + Skadi nerf (arrow_bonus 1 -> 0 at T1, keeps
+        # Skadi priced at 5) to pull Combo-vs-Economy down.
+        "POLISH_V2": TuningProfile(
+            id="POLISH_V2",
+            description="POLISH_V1 plus Skadi T1 cost 6, arrow_bonus 1.",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+            skadi_t1_cost=6,
+        ),
+        # Polish iteration 3: V2 plus hoard HP penalty to curb Economy's late
+        # game against Control when Mjolnir is not quite affordable yet.
+        "POLISH_V3": TuningProfile(
+            id="POLISH_V3",
+            description="POLISH_V2 plus hoard HP penalty (tokens >= 6: -1 HP).",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+            skadi_t1_cost=6,
+            hoard_hp_penalty_threshold=6,
+            hoard_hp_penalty=1,
+        ),
+        # Polish iteration 4: unused defense -> tokens (ratio 3). Addresses
+        # the root cause of Control vs Economy 96.5%: Control has 16 def
+        # faces but Economy only attacks with ~7, so most defense wastes.
+        # Converting unused def to tokens lets Control actually fire Aegis
+        # without triggering vs attacking archetypes (where def is consumed).
+        "POLISH_V4": TuningProfile(
+            id="POLISH_V4",
+            description="POLISH_V1 plus unused-defense-to-tokens (ratio 3).",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+            unused_defense_token_ratio=3,
+        ),
+        # V5: tighter ratio (2) - more aggressive asymmetric boost for Control.
+        "POLISH_V5": TuningProfile(
+            id="POLISH_V5",
+            description="POLISH_V1 plus unused-defense-to-tokens (ratio 2).",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+            unused_defense_token_ratio=2,
+        ),
+        # V6: give Control a cheap damage GP (Tyr T1 cost 3) so it can
+        # actually close vs Economy. Combined with cheap Aegis and mild
+        # unused-def-tokens. The real Control-vs-Economy problem is Control
+        # has NO damage - making Tyr affordable fills the gap.
+        "POLISH_V6": TuningProfile(
+            id="POLISH_V6",
+            description="POLISH_V1 plus Tyr T1 cost 3 and unused-def ratio 3.",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            freyja_token_gains=(2, 4, 7),
+            tyr_t1_cost=3,
+            tyr_t1_damage=2,
+            tyr_t1_block=2,
+            unused_defense_token_ratio=3,
+        ),
+        # V7: further tune Mjolnir and Freyja to curb Economy engine.
+        "POLISH_V7": TuningProfile(
+            id="POLISH_V7",
+            description="V6 plus Mjolnir T1 cost 8 and Freyja (1,3,6).",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=8,
+            freyja_token_gains=(1, 3, 6),
+            tyr_t1_cost=3,
+            tyr_t1_damage=2,
+            tyr_t1_block=2,
+            unused_defense_token_ratio=3,
+        ),
+        # V8: the Economy-vs-Control problem is Economy's 6x token advantage
+        # compounds into a 5.7x GP damage advantage. Nerf Mjolnir T1 damage
+        # (2 instead of 4) - at cost 7/dmg 2 = 3.5 tok/dmg, still above
+        # Constitution C03's 2.5 efficient-tier floor. Keep Tyr cheap for
+        # Control and unused-def ratio 3.
+        "POLISH_V8": TuningProfile(
+            id="POLISH_V8",
+            description="V6 plus Mjolnir T1 damage 2 (was 4) - heavy Eco nerf.",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            mjolnir_t1_damage=2,
+            freyja_token_gains=(2, 4, 7),
+            tyr_t1_cost=3,
+            tyr_t1_damage=2,
+            tyr_t1_block=2,
+            unused_defense_token_ratio=3,
+        ),
+        # V9: same as V8 but Mjolnir T1 damage 3 (middle ground).
+        "POLISH_V9": TuningProfile(
+            id="POLISH_V9",
+            description="V6 plus Mjolnir T1 damage 3.",
+            aegis_t1_cost=3,
+            aegis_t1_block=5,
+            frigg_t1_cost=5,
+            mjolnir_t1_cost=7,
+            mjolnir_t1_damage=3,
+            freyja_token_gains=(2, 4, 7),
+            tyr_t1_cost=3,
+            tyr_t1_damage=2,
+            tyr_t1_block=2,
+            unused_defense_token_ratio=3,
+        ),
     }
     _PROFILES.update(profiles)
     return profiles
@@ -372,8 +511,17 @@ def _tuned_god_powers(profile: TuningProfile) -> dict[str, GodPower]:
 
     aegis = god_powers["GP_AEGIS_OF_BALDR"]
     aegis_tiers = list(aegis.tiers)
-    aegis_tiers[0] = replace(aegis_tiers[0], block_amount=profile.aegis_t1_block)
+    aegis_tiers[0] = replace(
+        aegis_tiers[0],
+        cost=profile.aegis_t1_cost,
+        block_amount=profile.aegis_t1_block,
+    )
     god_powers[aegis.id] = replace(aegis, tiers=tuple(aegis_tiers))
+
+    eir = god_powers["GP_EIRS_MERCY"]
+    eir_tiers = list(eir.tiers)
+    eir_tiers[0] = replace(eir_tiers[0], cost=profile.eir_t1_cost, heal=profile.eir_t1_heal)
+    god_powers[eir.id] = replace(eir, tiers=tuple(eir_tiers))
 
     frigg = god_powers["GP_FRIGGS_VEIL"]
     frigg_tiers = list(frigg.tiers)
@@ -402,7 +550,11 @@ def _tuned_god_powers(profile: TuningProfile) -> dict[str, GodPower]:
 
     skadi = god_powers["GP_SKADIS_VOLLEY"]
     skadi_tiers = list(skadi.tiers)
-    skadi_tiers[0] = replace(skadi_tiers[0], cost=profile.skadi_t1_cost)
+    skadi_tiers[0] = replace(
+        skadi_tiers[0],
+        cost=profile.skadi_t1_cost,
+        arrow_bonus=profile.skadi_t1_arrow_bonus,
+    )
     god_powers[skadi.id] = replace(skadi, tiers=tuple(skadi_tiers))
 
     surtr = god_powers["GP_SURTRS_FLAME"]
@@ -414,6 +566,16 @@ def _tuned_god_powers(profile: TuningProfile) -> dict[str, GodPower]:
     fenrir_tiers = list(fenrir.tiers)
     fenrir_tiers[0] = replace(fenrir_tiers[0], cost=profile.fenrir_t1_cost)
     god_powers[fenrir.id] = replace(fenrir, tiers=tuple(fenrir_tiers))
+
+    tyr = god_powers["GP_TYRS_JUDGMENT"]
+    tyr_tiers = list(tyr.tiers)
+    tyr_tiers[0] = replace(
+        tyr_tiers[0],
+        cost=profile.tyr_t1_cost,
+        damage=profile.tyr_t1_damage,
+        block_amount=profile.tyr_t1_block,
+    )
+    god_powers[tyr.id] = replace(tyr, tiers=tuple(tyr_tiers))
 
     return god_powers
 
@@ -728,6 +890,9 @@ def _engine_kwargs_for_profile(profile: TuningProfile | None) -> dict:
         "enable_token_shield": profile.enable_token_shield,
         "steal_hp_penalty_threshold": profile.steal_hp_penalty_threshold,
         "steal_hp_penalty": profile.steal_hp_penalty,
+        "hoard_hp_penalty_threshold": profile.hoard_hp_penalty_threshold,
+        "hoard_hp_penalty": profile.hoard_hp_penalty,
+        "unused_defense_token_ratio": profile.unused_defense_token_ratio,
     }
 
 

@@ -106,6 +106,7 @@ class GameEngine:
         steal_hp_penalty: int = 0,
         hoard_hp_penalty_threshold: int | None = None,
         hoard_hp_penalty: int = 0,
+        unused_defense_token_ratio: int = 0,
         njordr_reroll_cap: int | None = None,
         god_powers: dict[str, GodPower] | None = None,
     ) -> None:
@@ -125,6 +126,11 @@ class GameEngine:
         self.steal_hp_penalty = steal_hp_penalty
         self.hoard_hp_penalty_threshold = hoard_hp_penalty_threshold
         self.hoard_hp_penalty = hoard_hp_penalty
+        # Unused-defense-to-tokens: a helmet without an axe to block, or a shield
+        # without an arrow to block, generates 1 token per N unused faces.
+        # 0 = disabled. Asymmetric: only rewards defensive dice when opponent
+        # under-attacks, which is exactly Control's problem vs Economy.
+        self.unused_defense_token_ratio = unused_defense_token_ratio
         self.njordr_reroll_cap = njordr_reroll_cap
         # Load GP definitions once; empty if no GPs in either loadout.
         if god_powers is not None:
@@ -427,6 +433,21 @@ class GameEngine:
         # p2_tokens = p2.tokens + (p2_blocks + 1) // 2
         p1_tokens = p1.tokens
         p2_tokens = p2.tokens
+
+        # Unused defense -> tokens. A helmet without an axe to block, or a
+        # shield without an arrow to block, converts to a token at the given
+        # ratio. Helps overbuilt defense vs low-attack opponents without
+        # rewarding defense when attacks actually threaten it.
+        p1_unused_def_tokens = 0
+        p2_unused_def_tokens = 0
+        if self.unused_defense_token_ratio > 0:
+            ratio = self.unused_defense_token_ratio
+            p1_unused_def = max(0, p1_helmets - p2_axes) + max(0, p1_shields - p2_arrows)
+            p2_unused_def = max(0, p2_helmets - p1_axes) + max(0, p2_shields - p1_arrows)
+            p1_unused_def_tokens = p1_unused_def // ratio
+            p2_unused_def_tokens = p2_unused_def // ratio
+            p1_tokens += p1_unused_def_tokens
+            p2_tokens += p2_unused_def_tokens
 
         # Thorns: every 2 blocked attacks (any type) deal 1 damage back to the attacker.
         # 2 blocks -> 1, 4 -> 2, 6 -> 3.
