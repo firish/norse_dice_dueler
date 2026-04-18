@@ -100,6 +100,8 @@ class GameEngine:
         rng: np.random.Generator | None = None,
         p1_gp_ids: tuple[str, ...] = (),
         p2_gp_ids: tuple[str, ...] = (),
+        enable_thorns: bool = True,
+        enable_token_shield: bool = True,
     ) -> None:
         assert len(p1_die_types) == NUM_DICE, f"P1 loadout must have {NUM_DICE} dice"
         assert len(p2_die_types) == NUM_DICE, f"P2 loadout must have {NUM_DICE} dice"
@@ -108,6 +110,11 @@ class GameEngine:
         self.rng = rng or np.random.default_rng()
         self.p1_gp_ids = p1_gp_ids
         self.p2_gp_ids = p2_gp_ids
+        # House-rule toggles. Default ON to preserve L0/L1/L2 baseline behavior.
+        # thorns: every 2 successful blocks deal 1 damage back to attacker.
+        # token_shield: every 4 tokens held reduces incoming dice damage by 1.
+        self.enable_thorns = enable_thorns
+        self.enable_token_shield = enable_token_shield
         # Load GP definitions once; empty if no GPs in either loadout.
         if p1_gp_ids or p2_gp_ids:
             self._god_powers = load_god_powers()
@@ -396,10 +403,11 @@ class GameEngine:
         # Token-threshold defense (uncapped): every 4 tokens held reduces
         # incoming dice damage by 1. Checked at start of combat (post-GP payment),
         # so spending tokens on a GP reduces your shield - real tradeoff.
-        p1_token_shield = p1.tokens // 4
-        p2_token_shield = p2.tokens // 4
-        dmg_to_p1 = max(0, dmg_to_p1 - p1_token_shield)
-        dmg_to_p2 = max(0, dmg_to_p2 - p2_token_shield)
+        if self.enable_token_shield:
+            p1_token_shield = p1.tokens // 4
+            p2_token_shield = p2.tokens // 4
+            dmg_to_p1 = max(0, dmg_to_p1 - p1_token_shield)
+            dmg_to_p2 = max(0, dmg_to_p2 - p2_token_shield)
 
         # Successful dice blocks generate tokens (1 per 2 blocks, round up).
         # p1_tokens = p1.tokens + (p1_blocks + 1) // 2
@@ -409,8 +417,12 @@ class GameEngine:
 
         # Thorns: every 2 blocked attacks (any type) deal 1 damage back to the attacker.
         # 2 blocks -> 1, 4 -> 2, 6 -> 3.
-        thorns_to_p1 = (p2_baxes + p2_barrows) // 2
-        thorns_to_p2 = (p1_baxes + p1_barrows) // 2
+        if self.enable_thorns:
+            thorns_to_p1 = (p2_baxes + p2_barrows) // 2
+            thorns_to_p2 = (p1_baxes + p1_barrows) // 2
+        else:
+            thorns_to_p1 = 0
+            thorns_to_p2 = 0
 
         new_state = replace(
             state,
