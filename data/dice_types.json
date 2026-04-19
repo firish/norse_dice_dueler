@@ -58,5 +58,50 @@
     },
     "power_budget": 6.0,
     "unlock": "Economy specialist"
+  },
+  {
+    "id": "DIE_GAMBLER",
+    "display_name": "Lokason's Die",
+    "role": "Burst aggro support with token fuel and almost no defense",
+    "faces": {
+      "axe": 2,
+      "arrow": 1,
+      "helmet": 0,
+      "shield": 0,
+      "hand": 1,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.2,
+    "unlock": "Aggro support"
+  },
+  {
+    "id": "DIE_SKALD",
+    "display_name": "Skald's Die",
+    "role": "Defensive control support with strong GP fuel",
+    "faces": {
+      "axe": 1,
+      "arrow": 0,
+      "helmet": 2,
+      "shield": 1,
+      "hand": 0,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.0,
+    "unlock": "Control support"
+  },
+  {
+    "id": "DIE_HUNTER",
+    "display_name": "Skjaldmaer's Die",
+    "role": "Pressure-economy support with combat and immediate GP fuel",
+    "faces": {
+      "axe": 1,
+      "arrow": 1,
+      "helmet": 1,
+      "shield": 0,
+      "hand": 1,
+      "bordered_hand": 2
+    },
+    "power_budget": 6.0,
+    "unlock": "Economy support"
   }
 ]
