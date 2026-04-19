@@ -1,96 +1,12 @@
 [
   {
-    "id": "GP_MJOLNIRS_WRATH",
-    "display_name": "Mjölnir's Wrath",
-    "category": "Offense",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 6,
-        "effect": "Deal 4 direct damage (unblockable by dice, blockable by Aegis).",
-        "damage": 4
-      },
-      {
-        "tier": "T2",
-        "cost": 11,
-        "effect": "Deal 4 direct damage.",
-        "damage": 4
-      },
-      {
-        "tier": "T3",
-        "cost": 16,
-        "effect": "Deal 6 direct damage.",
-        "damage": 6
-      }
-    ],
-    "design_notes": "Replaces Thor's Strike. Nerfed to 2.67 tokens/dmg at T3 vs original 1.5. Aegis blocks it."
-  },
-  {
-    "id": "GP_FENRIRS_BITE",
-    "display_name": "Fenrir's Bite",
-    "category": "Offense",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 5,
-        "effect": "Deal 3 damage. Apply 1 Bleed (1 dmg/round for 2 rounds).",
-        "damage": 3,
-        "bleed_stacks": 1
-      },
-      {
-        "tier": "T2",
-        "cost": 9,
-        "effect": "Deal 4 damage. Apply 2 Bleed.",
-        "damage": 4,
-        "bleed_stacks": 2
-      },
-      {
-        "tier": "T3",
-        "cost": 13,
-        "effect": "Deal 6 damage. Apply 3 Bleed.",
-        "damage": 6,
-        "bleed_stacks": 3
-      }
-    ],
-    "design_notes": "DoT archetype. Punished by Hel's Purge. Encourages patience."
-  },
-  {
-    "id": "GP_SKADIS_VOLLEY",
-    "display_name": "Skaði's Volley",
-    "category": "Offense",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 5,
-        "effect": "Your unblocked arrows this round deal +1 damage each.",
-        "damage": null,
-        "arrow_bonus": 1
-      },
-      {
-        "tier": "T2",
-        "cost": 7,
-        "effect": "Your unblocked arrows this round deal +2 damage each.",
-        "damage": null,
-        "arrow_bonus": 2
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "Your unblocked arrows this round deal +3 damage each.",
-        "damage": null,
-        "arrow_bonus": 3
-      }
-    ],
-    "design_notes": "Synergy with Hunter's and Gambler's dice. Wasted if opponent rolls shields."
-  },
-  {
     "id": "GP_SURTRS_FLAME",
     "display_name": "Surtr's Flame",
     "category": "Offense",
     "tiers": [
       {
         "tier": "T1",
-        "cost": 5,
+        "cost": 3,
         "effect": "Deal 2 damage. You take 1 damage.",
         "damage": 2,
         "self_damage": 1
@@ -110,39 +26,36 @@
         "self_damage": 2
       }
     ],
-    "design_notes": "Aggro risk/reward. Efficient but self-harming. Favors kamikaze builds."
+    "design_notes": "Aggro's cheap risky burst. T1-only in L2 experiment."
   },
   {
-    "id": "GP_LOKIS_GAMBIT",
-    "display_name": "Loki's Gambit",
+    "id": "GP_FENRIRS_BITE",
+    "display_name": "Fenrir's Bite",
     "category": "Offense",
     "tiers": [
       {
         "tier": "T1",
-        "cost": 5,
-        "effect": "Deal 1d4 damage (1-4, uniform).",
-        "damage": 2.5,
-        "dmg_min": 1,
-        "dmg_max": 4
+        "cost": 7,
+        "effect": "Deal 4 damage.",
+        "damage": 4,
+        "bleed_stacks": 0
       },
       {
         "tier": "T2",
-        "cost": 8,
-        "effect": "Deal 2d3 damage (2-6).",
-        "damage": 4,
-        "dmg_min": 2,
-        "dmg_max": 6
+        "cost": 9,
+        "effect": "Deal 5 damage.",
+        "damage": 5,
+        "bleed_stacks": 0
       },
       {
         "tier": "T3",
-        "cost": 11,
-        "effect": "Deal 3d3 damage (3-8).",
-        "damage": 5.5,
-        "dmg_min": 3,
-        "dmg_max": 8
+        "cost": 13,
+        "effect": "Deal 7 damage.",
+        "damage": 7,
+        "bleed_stacks": 0
       }
     ],
-    "design_notes": "High variance. Average deals more than Mjölnir per token but unreliable. Gambler fantasy."
+    "design_notes": "Aggro's heavy hit. Bleed removed for L2 simplification."
   },
   {
     "id": "GP_AEGIS_OF_BALDR",
@@ -151,7 +64,7 @@
     "tiers": [
       {
         "tier": "T1",
-        "cost": 2,
+        "cost": 4,
         "effect": "Block next 3 damage from any source this round.",
         "damage": null,
         "block_amount": 3
@@ -171,7 +84,7 @@
         "block_amount": 8
       }
     ],
-    "design_notes": "Hard counter to direct damage. Priced at equal efficiency to Mjölnir - mindgame city."
+    "design_notes": "Control's damage wall. On-curve counter to Mjolnir T1 (3 dmg, cost 8)."
   },
   {
     "id": "GP_EIRS_MERCY",
@@ -180,102 +93,126 @@
     "tiers": [
       {
         "tier": "T1",
-        "cost": 3,
+        "cost": 5,
         "effect": "Restore 2 health.",
         "damage": null,
         "heal": 2
       },
       {
         "tier": "T2",
-        "cost": 6,
+        "cost": 8,
         "effect": "Restore 4 health.",
         "damage": null,
         "heal": 4
       },
       {
         "tier": "T3",
-        "cost": 9,
+        "cost": 11,
         "effect": "Restore 6 health.",
         "damage": null,
         "heal": 6
       }
     ],
-    "design_notes": "Reactive - costed higher than damage because healing is guaranteed value."
+    "design_notes": "Control's sustain lever."
   },
   {
-    "id": "GP_VIDARS_REFLECTION",
-    "display_name": "Vidar's Reflection",
-    "category": "Defense",
+    "id": "GP_BRAGIS_SONG",
+    "display_name": "Bragi's Song",
+    "category": "Economy",
     "tiers": [
       {
         "tier": "T1",
-        "cost": 5,
-        "effect": "Reflect 50% of next God Power damage back to opponent.",
+        "cost": 6,
+        "effect": "Prevent up to 3 dice-combat damage this round and reflect half of it back.",
         "damage": null,
+        "damage_reduction": 3,
         "reflect_pct": 0.5
       },
       {
         "tier": "T2",
-        "cost": 8,
-        "effect": "Reflect 75%.",
-        "damage": null,
-        "reflect_pct": 0.75
+        "cost": 7,
+        "effect": "Next round, +1 reroll AND ignore reroll costs.",
+        "damage": null
       },
       {
         "tier": "T3",
-        "cost": 12,
-        "effect": "Reflect 100% + 1.",
-        "damage": null,
-        "reflect_pct": 1.0,
-        "reflect_bonus": 1
+        "cost": 10,
+        "effect": "Next round, +2 rerolls AND reroll costs reversed to opponent.",
+        "damage": null
       }
     ],
-    "design_notes": "Anti-combo. Punishes big T3 offensive plays. Useless if opponent doesn't use offense this round."
+    "design_notes": "Economy's anti-race GP. It only interacts with dice-combat damage, not GP damage."
   },
   {
-    "id": "GP_HELS_PURGE",
-    "display_name": "Hel's Purge",
-    "category": "Defense",
+    "id": "GP_GULLVEIGS_HOARD",
+    "display_name": "Gullveig's Hoard",
+    "category": "Economy",
     "tiers": [
       {
         "tier": "T1",
         "cost": 3,
-        "effect": "Remove all Bleed/Poison stacks on yourself.",
+        "effect": "Gain 4 tokens (net +1).",
         "damage": null,
-        "cleanse": true
+        "token_gain": 4
       },
       {
         "tier": "T2",
-        "cost": 6,
-        "effect": "Remove all stacks + heal 2.",
+        "cost": 5,
+        "effect": "Gain 7 tokens.",
         "damage": null,
-        "cleanse": true,
-        "heal": 2
+        "token_gain": 7
       },
       {
         "tier": "T3",
-        "cost": 9,
-        "effect": "Remove all stacks + heal 3 + gain 2 tokens.",
+        "cost": 7,
+        "effect": "Gain 10 tokens.",
         "damage": null,
-        "cleanse": true,
-        "heal": 3,
-        "token_gain": 2
+        "token_gain": 10
       }
     ],
-    "design_notes": "Niche but essential counter to Fenrir's Bite. Dead card in non-DoT matchups."
+    "design_notes": "Pure economy generator. Converts a GP slot to tempo: tokens this round instead of via Hand dice."
+  },
+  {
+    "id": "GP_TYRS_JUDGMENT",
+    "display_name": "Tyr's Judgment",
+    "category": "Hybrid",
+    "tiers": [
+      {
+        "tier": "T1",
+        "cost": 5,
+        "effect": "Deal 3 damage. Block next 2 damage.",
+        "damage": 3,
+        "block_amount": 2
+      },
+      {
+        "tier": "T2",
+        "cost": 8,
+        "effect": "Deal 3 damage. Block next 3 damage.",
+        "damage": 3,
+        "block_amount": 3
+      },
+      {
+        "tier": "T3",
+        "cost": 11,
+        "effect": "Deal 4 damage. Block next 4 damage.",
+        "damage": 4,
+        "block_amount": 4
+      }
+    ],
+    "design_notes": "Atk/def hybrid. Shared tool between Aggro and Control."
   },
   {
     "id": "GP_FRIGGS_VEIL",
     "display_name": "Frigg's Veil",
-    "category": "Defense",
+    "category": "Hybrid",
     "tiers": [
       {
         "tier": "T1",
-        "cost": 6,
-        "effect": "If opponent activates a God Power this round, cancel it and refund 50% of their tokens.",
+        "cost": 5,
+        "effect": "If opponent activates a God Power this round, cancel it with no refund.",
         "damage": null,
         "cancel_gp": true,
-        "refund_pct": 0.5
+        "refund_pct": 0.0
       },
       {
         "tier": "T2",
@@ -294,181 +231,32 @@
         "steal_tokens": true
       }
     ],
-    "design_notes": "Gotcha card. Dead if opponent doesn't activate anything. Expensive gamble."
+    "design_notes": "Def/eco hybrid. Dead if opponent passes."
   },
   {
-    "id": "GP_ODINS_INSIGHT",
-    "display_name": "Óðinn's Insight",
-    "category": "Utility",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 3,
-        "effect": "Peek at opponent's kept dice after their first reroll.",
-        "damage": null
-      },
-      {
-        "tier": "T2",
-        "cost": 6,
-        "effect": "Peek at kept dice + see their selected God Power.",
-        "damage": null
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "Full information: see all dice and God Power, gain 2 tokens.",
-        "damage": null,
-        "token_gain": 2
-      }
-    ],
-    "design_notes": "Information play. High skill ceiling - useless if you can't act on info."
-  },
-  {
-    "id": "GP_NJORDS_TIDE",
-    "display_name": "Njörðr's Tide",
-    "category": "Utility",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 4,
-        "effect": "Reroll up to 3 of your kept dice.",
-        "damage": null,
-        "reroll_count": 3
-      },
-      {
-        "tier": "T2",
-        "cost": 7,
-        "effect": "Reroll up to 5 kept dice.",
-        "damage": null,
-        "reroll_count": 5
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "Reroll all dice (kept and unkept), pick best of two.",
-        "damage": null,
-        "reroll_count": 6
-      }
-    ],
-    "design_notes": "Anti-RNG tool. Consistency for control players. Valuable under Loki's Mischief condition."
-  },
-  {
-    "id": "GP_BRAGIS_SONG",
-    "display_name": "Bragi's Song",
-    "category": "Utility",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 4,
-        "effect": "Next round, your dice cost 0 to reroll even if Conditions say otherwise.",
-        "damage": null
-      },
-      {
-        "tier": "T2",
-        "cost": 7,
-        "effect": "Next round, +1 reroll AND ignore reroll costs.",
-        "damage": null
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "Next round, +2 rerolls AND reroll costs reversed to opponent.",
-        "damage": null
-      }
-    ],
-    "design_notes": "Setup ability. Next-round value - commits you to a longer plan."
-  },
-  {
-    "id": "GP_TYRS_JUDGMENT",
-    "display_name": "Tyr's Judgment",
+    "id": "GP_MJOLNIRS_WRATH",
+    "display_name": "Mjölnir's Wrath",
     "category": "Hybrid",
     "tiers": [
       {
         "tier": "T1",
-        "cost": 4,
-        "effect": "Deal 2 damage. Block next 1 damage.",
-        "damage": 2,
-        "block_amount": 1
+        "cost": 8,
+        "effect": "Deal 3 direct damage (unblockable by dice, blockable by Aegis).",
+        "damage": 3
       },
       {
         "tier": "T2",
-        "cost": 7,
-        "effect": "Deal 3 damage. Block next 3 damage.",
-        "damage": 3,
-        "block_amount": 3
+        "cost": 12,
+        "effect": "Deal 5 direct damage.",
+        "damage": 5
       },
       {
         "tier": "T3",
-        "cost": 10,
-        "effect": "Deal 4 damage. Block next 4 damage.",
-        "damage": 4,
-        "block_amount": 4
+        "cost": 16,
+        "effect": "Deal 7 direct damage.",
+        "damage": 7
       }
     ],
-    "design_notes": "Balanced hybrid. Never the best at either role but flexible. Comfortable pick."
-  },
-  {
-    "id": "GP_FREYAS_BLESSING",
-    "display_name": "Freyja's Blessing",
-    "category": "Hybrid",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 4,
-        "effect": "Gain 3 tokens and heal 1.",
-        "damage": null,
-        "token_gain": 3,
-        "heal": 1
-      },
-      {
-        "tier": "T2",
-        "cost": 7,
-        "effect": "Gain 5 tokens and heal 2.",
-        "damage": null,
-        "token_gain": 5,
-        "heal": 2
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "Gain 8 tokens and heal 3.",
-        "damage": null,
-        "token_gain": 8,
-        "heal": 3
-      }
-    ],
-    "design_notes": "Economy burst + small heal. Enables combo turns."
-  },
-  {
-    "id": "GP_HEIMDALLRS_WATCH",
-    "display_name": "Heimdallr's Watch",
-    "category": "Hybrid",
-    "tiers": [
-      {
-        "tier": "T1",
-        "cost": 4,
-        "effect": "Your next attack this round is unblockable. Take -1 damage this round.",
-        "damage": null,
-        "unblockable": 1,
-        "damage_reduction": 1
-      },
-      {
-        "tier": "T2",
-        "cost": 7,
-        "effect": "Your next 2 attacks unblockable. -2 damage this round.",
-        "damage": null,
-        "unblockable": 2,
-        "damage_reduction": 2
-      },
-      {
-        "tier": "T3",
-        "cost": 10,
-        "effect": "All attacks unblockable this round. -3 damage this round.",
-        "damage": null,
-        "unblockable": 99,
-        "damage_reduction": 3
-      }
-    ],
-    "design_notes": "Anti-turtle tech. Punishes Warden's Dice defensive walls."
+    "design_notes": "Atk/eco hybrid. Economy's finisher. 2.67 tok/dmg at T1 respects C03 floor."
   }
 ]

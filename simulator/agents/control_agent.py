@@ -1,17 +1,13 @@
 """
 control_agent.py
 ----------------
-L2 Control archetype agent.
+L2 Control archetype agent (T1-only).
 
-Strategy: survive to round 8+, outlast opponent with defense and healing.
-  Keep: all dice (defense blocks damage, offense provides kill pressure, hands fuel GPs).
-  Control wins by sustaining - it needs SOME offense to eventually close out games.
-  GP priority switches based on HP threshold:
-    Healthy: Tyr (offense+defense) > Aegis > Eir
-    Hurt:    Eir (heal) > Aegis > Tyr
-
-This class provides the baseline archetype behavior. Experiment layers can
-override keep logic or GP choice with hooks without rewriting the core agent.
+Strategy: outlast via defense and sustain.
+  Keep: all dice (defense blocks, offense closes games, hands fuel GPs).
+  GP priority switches on HP:
+    Healthy: Aegis (block) > Tyr (block + dmg) > Eir (heal)
+    Hurt:    Eir (heal)    > Aegis           > Tyr
 """
 
 from __future__ import annotations
@@ -20,7 +16,7 @@ from typing import Callable
 
 import numpy as np
 
-from simulator.agents import Agent, choose_keep_by_faces, first_affordable_gp
+from simulator.agents import Agent, choose_keep_by_faces, first_affordable_gp, with_banked_tokens
 from simulator.game_state import GameState
 from simulator.god_powers import load_god_powers
 
@@ -28,9 +24,9 @@ _DEFAULT_KEEP = frozenset({
     "FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED",
     "FACE_AXE", "FACE_ARROW",
 })
-_DEFAULT_GP_HEALTHY = ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY")
+_DEFAULT_GP_HEALTHY = ("GP_AEGIS_OF_BALDR", "GP_TYRS_JUDGMENT", "GP_EIRS_MERCY")
 _DEFAULT_GP_HURT = ("GP_EIRS_MERCY", "GP_AEGIS_OF_BALDR", "GP_TYRS_JUDGMENT")
-_DEFAULT_TIER_ORDER = (0, 1, 2)
+_DEFAULT_TIER_ORDER = (0,)
 _DEFAULT_HP_THRESHOLD = 8
 
 
@@ -63,7 +59,7 @@ class ControlAgent(Agent):
         return choose_keep_by_faces(player, self.keep_faces)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        player = state.p1 if player_num == 1 else state.p2
+        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
 
         if self.gp_select_fn is not None:
             return self.gp_select_fn(state, player_num, self._god_powers)

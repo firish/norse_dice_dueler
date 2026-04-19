@@ -11,6 +11,8 @@ Agent roster (build order from CLAUDE.md section 14):
 """
 
 from __future__ import annotations
+
+from dataclasses import replace
 from typing import TYPE_CHECKING, Iterable, Mapping
 
 if TYPE_CHECKING:
@@ -52,6 +54,14 @@ def choose_keep_by_faces(player, keep_faces: frozenset[str]) -> frozenset[int]:
         i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
         if not kept and face in keep_faces
     )
+
+
+def with_banked_tokens(player):
+    """Return a copy of player with bordered-hand tokens available this round."""
+    banked = player.dice_faces.count("FACE_HAND_BORDERED")
+    if banked == 0:
+        return player
+    return replace(player, tokens=player.tokens + banked)
 
 
 def try_gp(player, god_powers: Mapping[str, object], gp_id: str, tier_order: Iterable[int]) -> tuple[str, int] | None:

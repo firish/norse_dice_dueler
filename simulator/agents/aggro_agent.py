@@ -1,16 +1,11 @@
 """
 aggro_agent.py
 --------------
-L2 Aggro archetype agent.
+L2 Aggro archetype agent (T1-only).
 
-Strategy: maximize front-loaded damage, end game by round 5-6.
-  Keep: axes, arrows (damage), bordered hands (GP fuel).
-  Reroll: helmets, shields, plain hands (no offensive value).
-  GP priority: Surtr (cheap burst) > Fenrir (damage + bleed) > Heimdallr (unblockable).
-  Always picks highest affordable tier.
-
-This class provides the baseline archetype behavior. Experiment layers can
-override keep logic or GP choice with hooks without rewriting the core agent.
+Strategy: front-loaded damage. Keep offensive faces, fire cheap burst GPs.
+  Keep: axes, arrows, bordered hands (GP fuel).
+  GP priority: Surtr (cheap burst) > Fenrir (heavy hit) > Tyr (dmg + block).
 """
 
 from __future__ import annotations
@@ -19,13 +14,13 @@ from typing import Callable
 
 import numpy as np
 
-from simulator.agents import Agent, choose_keep_by_faces, first_affordable_gp
+from simulator.agents import Agent, choose_keep_by_faces, first_affordable_gp, with_banked_tokens
 from simulator.game_state import GameState
 from simulator.god_powers import load_god_powers
 
 _DEFAULT_KEEP = frozenset({"FACE_AXE", "FACE_ARROW", "FACE_HAND_BORDERED"})
-_DEFAULT_GP_PRIORITY = ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_HEIMDALLRS_WATCH")
-_DEFAULT_TIER_ORDER = (2, 1, 0)
+_DEFAULT_GP_PRIORITY = ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT")
+_DEFAULT_TIER_ORDER = (0,)
 
 
 class AggroAgent(Agent):
@@ -53,7 +48,7 @@ class AggroAgent(Agent):
         return choose_keep_by_faces(player, self.keep_faces)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        player = state.p1 if player_num == 1 else state.p2
+        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
 
         if self.gp_select_fn is not None:
             return self.gp_select_fn(state, player_num, self._god_powers)
