@@ -14,7 +14,7 @@ Default behavior:
 Run:
     python -m simulator.l2_tiers_3
     python -m simulator.l2_tiers_3 --games 40 --top 10
-    python -m simulator.l2_tiers_3 --validate SOFTCTRL_GULL710_MJ1418_BRAGI85_116
+    python -m simulator.l2_tiers_3 --validate SURTR69_GULL710_MJ1418_BRAGI75_106
 """
 
 from __future__ import annotations
@@ -55,6 +55,8 @@ class Archetype:
 class TierProfile:
     name: str
     control_soft: bool
+    surtr_t2_cost: int
+    surtr_t3_cost: int
     gullveig_t2_cost: int
     gullveig_t3_cost: int
     mjolnir_t2_cost: int
@@ -122,6 +124,22 @@ class TierControlAgent(L2ControlAgent):
             incoming += 2
         if "GP_MJOLNIRS_WRATH" in opp.gp_loadout and opp.tokens >= 8:
             incoming += 3
+
+        if "GP_SURTRS_FLAME" in opp.gp_loadout:
+            if incoming >= 5 or (opp.tokens >= 7 and player.tokens >= 7):
+                choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (1, 0, 2))
+                if choice is not None:
+                    return choice
+            if incoming >= 3 or opp.tokens >= 3:
+                choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (0, 1, 2))
+                if choice is not None:
+                    return choice
+            if player.hp <= 9:
+                choice = try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (0, 1, 2))
+                if choice is not None:
+                    return choice
+            if player.hp <= 3:
+                return try_gp(player, self._god_powers, "GP_EIRS_MERCY", (1, 0, 2))
 
         if player.hp <= 4:
             return try_gp(player, self._god_powers, "GP_EIRS_MERCY", (2, 1, 0))
@@ -267,6 +285,16 @@ def build_god_powers(profile: TierProfile) -> dict[str, GodPower]:
         ),
     )
 
+    surtr = god_powers["GP_SURTRS_FLAME"]
+    god_powers["GP_SURTRS_FLAME"] = replace(
+        surtr,
+        tiers=(
+            surtr.tiers[0],
+            replace(surtr.tiers[1], cost=profile.surtr_t2_cost),
+            replace(surtr.tiers[2], cost=profile.surtr_t3_cost),
+        ),
+    )
+
     mjolnir = god_powers["GP_MJOLNIRS_WRATH"]
     god_powers["GP_MJOLNIRS_WRATH"] = replace(
         mjolnir,
@@ -306,6 +334,8 @@ def generate_profiles() -> list[TierProfile]:
     profiles: list[TierProfile] = []
     for (
         control_soft,
+        surtr_t2_cost,
+        surtr_t3_cost,
         gullveig_t2_cost,
         gullveig_t3_cost,
         mjolnir_t2_cost,
@@ -316,15 +346,18 @@ def generate_profiles() -> list[TierProfile]:
         (False, True),
         (6, 7),
         (9, 10),
-        (13, 14),
-        (17, 18),
-        ((8, 4, 0.5), (8, 5, 0.5)),
-        ((11, 5, 0.66), (11, 6, 0.66)),
+        (7,),
+        (10,),
+        (14,),
+        (18,),
+        ((7, 5, 0.5), (7, 6, 0.5), (8, 5, 0.5)),
+        ((10, 6, 0.66), (10, 7, 0.66), (11, 6, 0.66)),
     ):
         b2_cost, b2_reduce, b2_reflect = bragi_t2
         b3_cost, b3_reduce, b3_reflect = bragi_t3
         name = (
             f"{'SOFTCTRL_' if control_soft else ''}"
+            f"SURTR{surtr_t2_cost}{surtr_t3_cost}_"
             f"GULL{gullveig_t2_cost}{gullveig_t3_cost}_"
             f"MJ{mjolnir_t2_cost}{mjolnir_t3_cost}_"
             f"BRAGI{b2_cost}{b2_reduce}_{b3_cost}{b3_reduce}"
@@ -333,6 +366,8 @@ def generate_profiles() -> list[TierProfile]:
             TierProfile(
                 name=name,
                 control_soft=control_soft,
+                surtr_t2_cost=surtr_t2_cost,
+                surtr_t3_cost=surtr_t3_cost,
                 gullveig_t2_cost=gullveig_t2_cost,
                 gullveig_t3_cost=gullveig_t3_cost,
                 mjolnir_t2_cost=mjolnir_t2_cost,
