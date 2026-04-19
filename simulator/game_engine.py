@@ -16,7 +16,8 @@ L2 three-archetype scope:
     - Combat thorns enabled: every 3 blocked damage reflects 1.
     - Bordered hands bank tokens before GP choice; plain hands still steal at round end.
     - Bragi can prevent some dice damage and reflect part of it back.
-    - No Battlefield Conditions (L4), no Runes (L5).
+    - Optional single Battlefield Condition support for L4 harnessing.
+    - No Runes (L5).
 """
 
 from __future__ import annotations
@@ -92,6 +93,7 @@ class GameEngine:
         p1_gp_ids: tuple[str, ...] = (),
         p2_gp_ids: tuple[str, ...] = (),
         god_powers: dict[str, GodPower] | None = None,
+        condition_id: str | None = None,
     ) -> None:
         assert len(p1_die_types) == NUM_DICE, f"P1 loadout must have {NUM_DICE} dice"
         assert len(p2_die_types) == NUM_DICE, f"P2 loadout must have {NUM_DICE} dice"
@@ -100,12 +102,32 @@ class GameEngine:
         self.rng = rng or np.random.default_rng()
         self.p1_gp_ids = p1_gp_ids
         self.p2_gp_ids = p2_gp_ids
+        self.condition_id = condition_id
         if god_powers is not None:
             self._god_powers = god_powers
         elif p1_gp_ids or p2_gp_ids:
             self._god_powers = load_god_powers()
         else:
             self._god_powers: dict = {}
+
+        self._starting_hp = STARTING_HP + 2 if self.condition_id == "COND_YGGDRASIL_ROOTS" else STARTING_HP
+
+    def _has_condition(self, condition_id: str) -> bool:
+        return self.condition_id == condition_id
+
+    def _gp_cost(self, base_cost: int, round_num: int) -> int:
+        if self._has_condition("COND_JOTUN_MIGHT") and base_cost >= 7:
+            return max(1, base_cost - 1)
+        return base_cost
+
+    def _choice_cost(self, choice: tuple[str, int] | None) -> int:
+        if choice is None:
+            return 0
+        gp_id, tier_idx = choice
+        gp = self._god_powers.get(gp_id)
+        if gp is None:
+            return 0
+        return self._gp_cost(gp.tiers[tier_idx].cost)
 
     # ------------------------------------------------------------------
     # Public API
@@ -116,14 +138,14 @@ class GameEngine:
             round_num=1,
             phase=GamePhase.REVEAL,
             p1=PlayerState(
-                hp=STARTING_HP,
+                hp=self._starting_hp,
                 tokens=STARTING_TOKENS,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
                 gp_loadout=self.p1_gp_ids,
             ),
             p2=PlayerState(
-                hp=STARTING_HP,
+                hp=self._starting_hp,
                 tokens=STARTING_TOKENS,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
@@ -219,16 +241,29 @@ class GameEngine:
     # ------------------------------------------------------------------
 
     def _phase_reveal(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        return replace(state, phase=GamePhase.ROLL), []
+        if self.condition_id is None:
+            return replace(state, phase=GamePhase.ROLL), []
+        return replace(state, phase=GamePhase.ROLL), [
+            GameEvent("condition_active", {"condition_id": self.condition_id, "round": state.round_num})
+        ]
 
     def _phase_roll(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
         p1_faces = _roll_all(self.p1_die_types, self.rng)
         p2_faces = _roll_all(self.p2_die_types, self.rng)
+        p1_kept = _ALL_FREE
+        p2_kept = _ALL_FREE
+
+        if self._has_condition("COND_LOKI_MISCHIEF") and state.round_num <= 3:
+            p1_lock = int(self.rng.integers(0, NUM_DICE))
+            p2_lock = int(self.rng.integers(0, NUM_DICE))
+            p1_kept = tuple(i == p1_lock for i in range(NUM_DICE))
+            p2_kept = tuple(i == p2_lock for i in range(NUM_DICE))
+
         new_state = replace(
             state,
             phase=GamePhase.KEEP_1,
-            p1=replace(state.p1, dice_faces=p1_faces, dice_kept=_ALL_FREE),
-            p2=replace(state.p2, dice_faces=p2_faces, dice_kept=_ALL_FREE),
+            p1=replace(state.p1, dice_faces=p1_faces, dice_kept=p1_kept),
+            p2=replace(state.p2, dice_faces=p2_faces, dice_kept=p2_kept),
         )
         return new_state, [GameEvent("dice_rolled", {"p1": p1_faces, "p2": p2_faces})]
 
@@ -254,19 +289,29 @@ class GameEngine:
         state: GameState,
         next_phase: GamePhase,
     ) -> tuple[GameState, list[GameEvent]]:
+        p1_kept = state.p1.dice_kept
+        p2_kept = state.p2.dice_kept
+        p1_tokens = state.p1.tokens
+        p2_tokens = state.p2.tokens
+        events: list[GameEvent] = []
+
+        if self._has_condition("COND_ODIN_GAZE") and next_phase == GamePhase.GOD_POWER and state.round_num <= 3:
+            p1_kept = (True,) * NUM_DICE
+            p2_kept = (True,) * NUM_DICE
+
         p1_faces = _reroll_unkept(
-            state.p1.dice_faces, state.p1.dice_kept, self.p1_die_types, self.rng
+            state.p1.dice_faces, p1_kept, self.p1_die_types, self.rng
         )
         p2_faces = _reroll_unkept(
-            state.p2.dice_faces, state.p2.dice_kept, self.p2_die_types, self.rng
+            state.p2.dice_faces, p2_kept, self.p2_die_types, self.rng
         )
         new_state = replace(
             state,
             phase=next_phase,
-            p1=replace(state.p1, dice_faces=p1_faces),
-            p2=replace(state.p2, dice_faces=p2_faces),
+            p1=replace(state.p1, dice_faces=p1_faces, dice_kept=p1_kept, tokens=p1_tokens),
+            p2=replace(state.p2, dice_faces=p2_faces, dice_kept=p2_kept, tokens=p2_tokens),
         )
-        return new_state, []
+        return new_state, events
 
     def _phase_god_power(
         self,
@@ -275,8 +320,14 @@ class GameEngine:
         p2_action: tuple[str, int] | None,
     ) -> tuple[GameState, list[GameEvent]]:
         """Bank bordered hands, then validate GP choices and deduct costs."""
-        p1_banked = state.p1.dice_faces.count("FACE_HAND_BORDERED")
-        p2_banked = state.p2.dice_faces.count("FACE_HAND_BORDERED")
+        p1_bordered = state.p1.dice_faces.count("FACE_HAND_BORDERED")
+        p2_bordered = state.p2.dice_faces.count("FACE_HAND_BORDERED")
+        p1_banked = p1_bordered
+        p2_banked = p2_bordered
+        if self._has_condition("COND_FREYA_BLESSING"):
+            if state.round_num >= 5:
+                p1_banked += 1 if p1_bordered >= 2 else 0
+                p2_banked += 1 if p2_bordered >= 2 else 0
         p1 = replace(state.p1, tokens=state.p1.tokens + p1_banked)
         p2 = replace(state.p2, tokens=state.p2.tokens + p2_banked)
         events: list[GameEvent] = []
@@ -297,6 +348,8 @@ class GameEngine:
             if action is None:
                 return player
             gp_id, tier_idx = action
+            if self._has_condition("COND_TYR_ARENA") and tier_idx >= 1:
+                return player
             if gp_id not in player.gp_loadout:
                 return player
             if tier_idx not in (0, 1, 2):
@@ -305,15 +358,16 @@ class GameEngine:
             if gp is None:
                 return player
             tier = gp.tiers[tier_idx]
-            if player.tokens < tier.cost:
+            effective_cost = self._gp_cost(tier.cost, state.round_num)
+            if player.tokens < effective_cost:
                 return player
             events.append(GameEvent("gp_chosen", {
                 "player": player_num, "gp_id": gp_id,
-                "tier": tier_idx, "cost": tier.cost,
+                "tier": tier_idx, "cost": effective_cost,
             }))
             return replace(
                 player,
-                tokens=player.tokens - tier.cost,
+                tokens=player.tokens - effective_cost,
                 gp_choice=(gp_id, tier_idx),
             )
 
@@ -348,6 +402,12 @@ class GameEngine:
         dmg_to_p2 = (p1_axes + p1_arrows) - p2_blocks + p1_thorns
         dmg_to_p1 = (p2_axes + p2_arrows) - p1_blocks + p2_thorns
 
+        if self._has_condition("COND_FENRIR_HUNT") and state.round_num >= 4:
+            if (p1_axes + p1_arrows) > 0 and (p1_axes + p1_arrows) - p2_blocks == 0:
+                dmg_to_p2 += 1
+            if (p2_axes + p2_arrows) > 0 and (p2_axes + p2_arrows) - p1_blocks == 0:
+                dmg_to_p1 += 1
+
         p1_bragi_reflect = 0
         p2_bragi_reflect = 0
         if p1.gp_choice is not None and p1.gp_choice[0] == "GP_BRAGIS_SONG":
@@ -364,11 +424,17 @@ class GameEngine:
         dmg_to_p1 += p2_bragi_reflect
         dmg_to_p2 += p1_bragi_reflect
 
+        p1_tokens = p1.tokens
+        p2_tokens = p2.tokens
+        if self._has_condition("COND_NIFLHEIM_CHILL"):
+            p1_tokens += 1 if p1_blocks >= 3 else 0
+            p2_tokens += 1 if p2_blocks >= 3 else 0
+
         new_state = replace(
             state,
             phase=GamePhase.GOD_RESOLVE,
-            p1=replace(p1, hp=p1.hp - dmg_to_p1),
-            p2=replace(p2, hp=p2.hp - dmg_to_p2),
+            p1=replace(p1, hp=p1.hp - dmg_to_p1, tokens=p1_tokens),
+            p2=replace(p2, hp=p2.hp - dmg_to_p2, tokens=p2_tokens),
         )
         return new_state, [
             GameEvent("combat", {
@@ -376,6 +442,7 @@ class GameEngine:
                 "p1_thorns": p1_thorns, "p2_thorns": p2_thorns,
                 "p1_bragi_reflect": p1_bragi_reflect,
                 "p2_bragi_reflect": p2_bragi_reflect,
+                "p1_blocks": p1_blocks, "p2_blocks": p2_blocks,
             })
         ]
 
@@ -420,9 +487,9 @@ class GameEngine:
             if p2.gp_choice is not None and p2_tier is not None:
                 p2_cancelled = True
                 if p1_tier.steal_tokens:
-                    p1_tokens += p2_tier.cost
+                    p1_tokens += self._choice_cost(p2.gp_choice)
                 else:
-                    p2_tokens += int(p2_tier.cost * p1_tier.refund_pct)
+                    p2_tokens += int(self._choice_cost(p2.gp_choice) * p1_tier.refund_pct)
                 events.append(GameEvent("gp_cancel", {"player": 1}))
             p1_cancelled = True  # Frigg has no offense/defense payload
 
@@ -430,9 +497,9 @@ class GameEngine:
             if p1.gp_choice is not None and p1_tier is not None:
                 p1_cancelled = True
                 if p2_tier.steal_tokens:
-                    p2_tokens += p1_tier.cost
+                    p2_tokens += self._choice_cost(p1.gp_choice)
                 else:
-                    p1_tokens += int(p1_tier.cost * p2_tier.refund_pct)
+                    p1_tokens += int(self._choice_cost(p1.gp_choice) * p2_tier.refund_pct)
                 events.append(GameEvent("gp_cancel", {"player": 2}))
             p2_cancelled = True
 
@@ -462,6 +529,9 @@ class GameEngine:
         # --- 4. Healing ---
         p1_heal = p1_tier.heal if (not p1_cancelled and p1_tier is not None) else 0
         p2_heal = p2_tier.heal if (not p2_cancelled and p2_tier is not None) else 0
+        if self._has_condition("COND_MIDGARD_HEARTH"):
+            p1_heal += 1 if p1_heal > 0 else 0
+            p2_heal += 1 if p2_heal > 0 else 0
 
         # --- 5. Token gain ---
         if not p1_cancelled and p1_tier is not None:
@@ -469,8 +539,8 @@ class GameEngine:
         if not p2_cancelled and p2_tier is not None:
             p2_tokens += p2_tier.token_gain
 
-        p1_new_hp = min(STARTING_HP, max(0, p1.hp - final_dmg_to_p1 + p1_heal))
-        p2_new_hp = min(STARTING_HP, max(0, p2.hp - final_dmg_to_p2 + p2_heal))
+        p1_new_hp = min(self._starting_hp, max(0, p1.hp - final_dmg_to_p1 + p1_heal))
+        p2_new_hp = min(self._starting_hp, max(0, p2.hp - final_dmg_to_p2 + p2_heal))
 
         new_state = replace(
             state,
@@ -501,8 +571,8 @@ class GameEngine:
         p1 = state.p1
         p2 = state.p2
 
-        p1_plain    = p1.dice_faces.count("FACE_HAND")
-        p2_plain    = p2.dice_faces.count("FACE_HAND")
+        p1_plain = p1.dice_faces.count("FACE_HAND")
+        p2_plain = p2.dice_faces.count("FACE_HAND")
 
         p1_steal = min(p1_plain, p2.tokens)
         p2_steal = min(p2_plain, p1.tokens)
@@ -525,8 +595,22 @@ class GameEngine:
         ]
 
     def _phase_end_check(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        p1_dead = state.p1.hp <= 0
-        p2_dead = state.p2.hp <= 0
+        p1 = state.p1
+        p2 = state.p2
+        events: list[GameEvent] = []
+
+        if self._has_condition("COND_RAGNAROK") and state.round_num >= 5:
+            p1 = replace(p1, hp=max(0, p1.hp - 1))
+            p2 = replace(p2, hp=max(0, p2.hp - 1))
+            events.append(GameEvent("condition_tick", {
+                "condition_id": self.condition_id,
+                "round": state.round_num,
+                "p1_hp": p1.hp,
+                "p2_hp": p2.hp,
+            }))
+
+        p1_dead = p1.hp <= 0
+        p2_dead = p2.hp <= 0
 
         if p1_dead and p2_dead:
             winner: int | None = 0
@@ -538,28 +622,28 @@ class GameEngine:
             winner = None
 
         if winner is not None:
-            return replace(state, phase=GamePhase.GAME_OVER, winner=winner), [
-                GameEvent("game_over", {
+            events.append(GameEvent("game_over", {
                     "winner": winner, "round": state.round_num,
-                    "p1_hp": state.p1.hp, "p2_hp": state.p2.hp,
-                })
-            ]
+                    "p1_hp": p1.hp, "p2_hp": p2.hp,
+                }))
+            return replace(state, phase=GamePhase.GAME_OVER, winner=winner, p1=p1, p2=p2), events
 
         new_state = replace(
             state,
             round_num=state.round_num + 1,
             phase=GamePhase.REVEAL,
             p1=replace(
-                state.p1,
+                p1,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
                 gp_choice=None,
             ),
             p2=replace(
-                state.p2,
+                p2,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
                 gp_choice=None,
             ),
         )
-        return new_state, [GameEvent("round_end", {"round": state.round_num})]
+        events.append(GameEvent("round_end", {"round": state.round_num}))
+        return new_state, events
