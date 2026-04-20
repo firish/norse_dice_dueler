@@ -27,12 +27,12 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from simulator.game_state import GameEvent, GamePhase, GameState, PlayerState
-from simulator.die_types import DieType
-from simulator.god_powers import GodPower, load_god_powers
+from game_mechanics.game_state import GameEvent, GamePhase, GameState, PlayerState
+from game_mechanics.die_types import DieType
+from game_mechanics.god_powers import GodPower, load_god_powers
 
 if TYPE_CHECKING:
-    from simulator.agents import Agent
+    from agents import Agent
 
 # ---------------------------------------------------------------------------
 # Constants

@@ -19,8 +19,8 @@ import pathlib
 
 import numpy as np
 
-from simulator.game_engine import GameEngine
-from simulator.game_state import GamePhase
+from game_mechanics.game_engine import GameEngine
+from game_mechanics.game_state import GamePhase
 from simulator.l3_advanced_dice_pool import ARCHETYPES, TARGETS
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
@@ -45,7 +45,7 @@ def load_condition_pairs(include_reserves: bool) -> list[tuple[str, str]]:
 
 def _resolve_dice(ids: tuple[str, ...]):
     """Resolve die ids into the concrete six-die loadout."""
-    from simulator.die_types import load_die_types
+    from game_mechanics.die_types import load_die_types
 
     die_types = load_die_types()
     return [die_types[die_id] for die_id in ids]

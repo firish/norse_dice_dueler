@@ -17,10 +17,10 @@ import argparse
 
 import numpy as np
 
-from simulator.agents.random_agent import RandomAgent
-from simulator.die_types import load_die_types
-from simulator.game_engine import GameEngine
-from simulator.game_state import GamePhase
+from agents.random_agent import RandomAgent
+from game_mechanics.die_types import load_die_types
+from game_mechanics.game_engine import GameEngine
+from game_mechanics.game_state import GamePhase
 
 
 def run_l0(games: int, die_id: str, seed: int) -> tuple[int, int, int]:

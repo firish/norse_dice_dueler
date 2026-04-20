@@ -13,15 +13,15 @@ from typing import Callable
 
 import numpy as np
 
-from simulator.agents import (
+from agents import (
     Agent,
     choose_keep_by_faces,
     first_affordable_gp,
     try_gp,
     with_banked_tokens,
 )
-from simulator.game_state import GameState
-from simulator.god_powers import load_god_powers
+from game_mechanics.game_state import GameState
+from game_mechanics.god_powers import load_god_powers
 
 _DEFAULT_KEEP = frozenset({
     "FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED",

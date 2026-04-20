@@ -23,12 +23,12 @@ from itertools import product
 
 import numpy as np
 
-from simulator.agents.aggro_agent import AggroAgent
-from simulator.agents.control_agent import MatchupAwareControlAgent
-from simulator.agents.economy_agent import MatchupAwareEconomyAgent
-from simulator.die_types import load_die_types
-from simulator.game_engine import GameEngine
-from simulator.game_state import GamePhase
+from agents.aggro_agent import AggroAgent
+from agents.control_agent import MatchupAwareControlAgent
+from agents.economy_agent import MatchupAwareEconomyAgent
+from game_mechanics.die_types import load_die_types
+from game_mechanics.game_engine import GameEngine
+from game_mechanics.game_state import GamePhase
 
 TARGETS: dict[tuple[str, str], float] = {
     ("AGGRO", "CONTROL"): 40.0,

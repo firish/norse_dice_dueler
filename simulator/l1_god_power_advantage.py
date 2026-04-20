@@ -22,12 +22,12 @@ import argparse
 
 import numpy as np
 
-from simulator.agents.greedy_agent import GreedyAgent
-from simulator.agents.random_agent import RandomAgent
-from simulator.die_types import load_die_types
-from simulator.game_engine import GameEngine
-from simulator.game_state import GamePhase
-from simulator.god_powers import load_god_powers
+from agents.greedy_agent import GreedyAgent
+from agents.random_agent import RandomAgent
+from game_mechanics.die_types import load_die_types
+from game_mechanics.game_engine import GameEngine
+from game_mechanics.game_state import GamePhase
+from game_mechanics.god_powers import load_god_powers
 
 L1_USEFUL_GP_IDS: tuple[str, ...] = (
     "GP_SURTRS_FLAME",

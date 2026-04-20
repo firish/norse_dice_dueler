@@ -22,13 +22,13 @@ from itertools import product
 
 import numpy as np
 
-from simulator.agents.aggro_agent import TierAwareAggroAgent
-from simulator.agents.control_agent import TierAwareControlAgent
-from simulator.agents.economy_agent import TierAwareEconomyAgent
-from simulator.die_types import load_die_types
-from simulator.game_engine import GameEngine
-from simulator.game_state import GamePhase
-from simulator.god_powers import GodPower, load_god_powers
+from agents.aggro_agent import TierAwareAggroAgent
+from agents.control_agent import TierAwareControlAgent
+from agents.economy_agent import TierAwareEconomyAgent
+from game_mechanics.die_types import load_die_types
+from game_mechanics.game_engine import GameEngine
+from game_mechanics.game_state import GamePhase
+from game_mechanics.god_powers import GodPower, load_god_powers
 
 TARGETS: dict[tuple[str, str], float] = {
     ("AGGRO", "CONTROL"): 40.0,

@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from simulator.agents import Agent, try_gp, with_banked_tokens
-from simulator.game_state import GameState
-from simulator.god_powers import load_god_powers
+from agents import Agent, try_gp, with_banked_tokens
+from game_mechanics.game_state import GameState
+from game_mechanics.god_powers import load_god_powers
 
 _KEEP_FACES = frozenset({
     "FACE_AXE",

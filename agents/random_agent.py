@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from simulator.agents import Agent
-from simulator.game_state import GameState
+from agents import Agent
+from game_mechanics.game_state import GameState
 
 
 class RandomAgent(Agent):

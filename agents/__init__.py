@@ -14,7 +14,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
 if TYPE_CHECKING:
-    from simulator.game_state import GameState
+    from game_mechanics.game_state import GameState
 
 
 class Agent:
