@@ -44,7 +44,7 @@
   {
     "id": "COND_TYR_ARENA",
     "display_name": "Tyr's Arena",
-    "effect": "Tier 2 and Tier 3 God Powers cannot be activated.",
+    "effect": "God Powers cannot be activated during round 1.",
     "archetype_skew": "Favors Aggro (dice-focused). Hurts Combo (God Power dependent).",
     "rarity": "Rare (5% appearance)"
   },

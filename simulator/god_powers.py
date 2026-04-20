@@ -1,32 +1,17 @@
-"""
-god_powers.py
--------------
-GodPower definitions loaded from /data/god_powers.json.
+"""Load structured God Power definitions from ``data/god_powers.json``.
 
-Each GodPower has 3 tiers with escalating cost and effect.
-Effect-specific fields are loaded from JSON and used by the engine
-during GOD_RESOLVE.
-
-L2 scope: all 16 GPs loaded with full structured fields.
-Bragi's Song is loaded but deferred (no archetype uses it).
+The simulator currently uses a focused nine-power ruleset, but the loader stays
+data-driven so future layers can extend the JSON contract without changing the
+engine entry points.
 """
 
 from __future__ import annotations
 
 import json
 import pathlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 _DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-
-# GPs active at L1. Engine will resolve these; all others are skipped.
-L1_OFFENSIVE_GP_IDS: frozenset[str] = frozenset({
-    "GP_MJOLNIRS_WRATH",
-    "GP_SKADIS_VOLLEY",
-    "GP_SURTRS_FLAME",
-    "GP_LOKIS_GAMBIT",
-})
-
 
 @dataclass(frozen=True)
 class GodPowerTier:
@@ -47,7 +32,6 @@ class GodPowerTier:
     arrow_bonus: int = 0    # bonus per unblocked arrow (Skaði)
     dmg_min: int = 0        # random damage floor (Loki)
     dmg_max: int = 0        # random damage ceiling (Loki)
-    bleed_stacks: int = 0   # bleed stacks applied (Fenrir)
     # -- Defense --
     block_amount: int = 0   # damage blocked this round (Aegis, Tyr)
     heal: int = 0           # HP restored (Eir, Freyja, Hel's Purge)
@@ -96,7 +80,6 @@ def _parse_tier(raw: dict) -> GodPowerTier:
         arrow_bonus=int(raw.get("arrow_bonus") or 0),
         dmg_min=int(raw.get("dmg_min") or 0),
         dmg_max=int(raw.get("dmg_max") or 0),
-        bleed_stacks=int(raw.get("bleed_stacks") or 0),
         block_amount=int(raw.get("block_amount") or 0),
         heal=int(raw.get("heal") or 0),
         reflect_pct=float(raw.get("reflect_pct") or 0),

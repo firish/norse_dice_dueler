@@ -1,26 +1,29 @@
-"""
-agents/
--------
-Agent base class. All agents implement choose_keep() and choose_god_power().
+"""Shared agent protocol and helper utilities.
 
-Agent roster (build order from CLAUDE.md section 14):
-    L0  RandomAgent      - uniform random legal actions
-    L1  GreedyAgent      - heuristic score function (Aggro / Control / Economy variants)
-    L2  ArchetypeAgent   - rule-based strategy (10-15 rules per archetype)
-    L3+ MCTSAgent        - Monte Carlo Tree Search (only if results seem suspicious)
+The concrete agent implementations live in sibling modules:
+
+- `random_agent.py` for the L0 baseline
+- `greedy_agent.py` for the simple L1 GP baseline
+- `aggro_agent.py`, `control_agent.py`, and `economy_agent.py` for
+  matchup-aware archetype pilots used by the balance harnesses
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
 if TYPE_CHECKING:
     from simulator.game_state import GameState
 
 
 class Agent:
-    """Abstract base class. Subclasses must implement choose_keep()."""
+    """Abstract decision policy used by the simulator.
+
+    Agents are intentionally lightweight. They only make decisions in the two
+    keep phases and in the God Power phase. Every other phase is resolved by
+    the engine.
+    """
 
     def choose_keep(self, state: "GameState", player_num: int) -> frozenset[int]:
         """
@@ -49,7 +52,7 @@ class Agent:
 
 
 def choose_keep_by_faces(player, keep_faces: frozenset[str]) -> frozenset[int]:
-    """Keep every currently unlocked die whose face matches the keep set."""
+    """Keep every unlocked die whose current face is in ``keep_faces``."""
     return frozenset(
         i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
         if not kept and face in keep_faces
@@ -57,15 +60,24 @@ def choose_keep_by_faces(player, keep_faces: frozenset[str]) -> frozenset[int]:
 
 
 def with_banked_tokens(player):
-    """Return a copy of player with bordered-hand tokens available this round."""
+    """Return a player copy with bordered-hand income added to current tokens.
+
+    Several harness agents make GP decisions as if bordered hands are already
+    banked, because that matches the current engine timing.
+    """
     banked = player.dice_faces.count("FACE_HAND_BORDERED")
     if banked == 0:
         return player
     return replace(player, tokens=player.tokens + banked)
 
 
-def try_gp(player, god_powers: Mapping[str, object], gp_id: str, tier_order: Iterable[int]) -> tuple[str, int] | None:
-    """Return the first affordable tier for a GP, or None if it cannot be cast."""
+def try_gp(
+    player,
+    god_powers: Mapping[str, Any],
+    gp_id: str,
+    tier_order: Iterable[int],
+) -> tuple[str, int] | None:
+    """Return the first affordable tier for ``gp_id`` using ``tier_order``."""
     if gp_id not in player.gp_loadout:
         return None
 
@@ -81,7 +93,7 @@ def try_gp(player, god_powers: Mapping[str, object], gp_id: str, tier_order: Ite
 
 def first_affordable_gp(
     player,
-    god_powers: Mapping[str, object],
+    god_powers: Mapping[str, Any],
     gp_priority: Iterable[str],
     tier_order: Iterable[int],
 ) -> tuple[str, int] | None:
@@ -91,3 +103,12 @@ def first_affordable_gp(
         if choice is not None:
             return choice
     return None
+
+
+__all__ = [
+    "Agent",
+    "choose_keep_by_faces",
+    "first_affordable_gp",
+    "try_gp",
+    "with_banked_tokens",
+]

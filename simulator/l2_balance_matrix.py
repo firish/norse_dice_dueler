@@ -1,7 +1,4 @@
-"""
-l2_three_arch.py
-----------------
-L2 three-archetype round robin (Aggro / Control / Economy).
+"""L2 balance matrix for the tuned three-archetype shell.
 
 Goal: validate a clean 3x3 rock-paper-scissors matchup matrix using only
   - 4 dice (Warrior, Berserker, Warden, Miser)
@@ -10,7 +7,7 @@ Goal: validate a clean 3x3 rock-paper-scissors matchup matrix using only
 
 Archetype loadouts:
   AGGRO   : 4x Berserker + 2x Warrior, GPs = Surtr, Fenrir, Tyr
-  CONTROL : 3x Warden    + 3x Warrior, GPs = Aegis,  Tyr,    Frigg
+  CONTROL : 3x Warden    + 3x Warrior, GPs = Aegis, Eir, Tyr
   ECONOMY : 3x Miser     + 3x Warrior, GPs = Mjolnir, Gullveig, Bragi
 
 Target matrix (rows beat columns if > 50):
@@ -20,21 +17,20 @@ Target matrix (rows beat columns if > 50):
   ECONOMY   40     60       50
 
 Run:
-    python -m simulator.l2_three_arch                   # defaults to 2000 games/cell
-    python -m simulator.l2_three_arch --games 5000
+    python -m simulator.l2_balance_matrix
+    python -m simulator.l2_balance_matrix --games 5000
 """
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 import numpy as np
 
-from simulator.agents import choose_keep_by_faces, first_affordable_gp, try_gp, with_banked_tokens
 from simulator.agents.aggro_agent import AggroAgent
-from simulator.agents.control_agent import ControlAgent
-from simulator.agents.economy_agent import EconomyAgent
+from simulator.agents.control_agent import MatchupAwareControlAgent
+from simulator.agents.economy_agent import MatchupAwareEconomyAgent
 from simulator.die_types import load_die_types
 from simulator.game_engine import GameEngine
 from simulator.game_state import GamePhase
@@ -46,79 +42,12 @@ from simulator.game_state import GamePhase
 
 @dataclass(frozen=True)
 class Archetype:
+    """Fixed archetype definition used by a benchmark harness."""
+
     name: str
-    dice_ids: tuple[str, ...]       # length 6
-    gp_ids: tuple[str, ...]         # length 3
+    dice_ids: tuple[str, ...]
+    gp_ids: tuple[str, ...]
     agent_cls: type
-
-
-class L2ControlAgent(ControlAgent):
-    """Control pilot tuned for anti-economy timing without losing the aggro edge."""
-
-    def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
-        player = state.p1 if player_num == 1 else state.p2
-        opp = state.p2 if player_num == 1 else state.p1
-        if "GP_MJOLNIRS_WRATH" in opp.gp_loadout:
-            keep_faces = frozenset({
-                "FACE_HELMET", "FACE_SHIELD", "FACE_HAND_BORDERED",
-                "FACE_HAND", "FACE_AXE",
-            })
-        else:
-            keep_faces = self.keep_faces
-        return choose_keep_by_faces(player, keep_faces)
-
-    def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
-        opp = with_banked_tokens(state.p2 if player_num == 1 else state.p1)
-
-        if "GP_MJOLNIRS_WRATH" in opp.gp_loadout:
-            choice = try_gp(player, self._god_powers, "GP_FRIGGS_VEIL", self.tier_order)
-            if choice is not None:
-                return choice
-            choice = try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", self.tier_order)
-            if choice is not None:
-                return choice
-            return try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", self.tier_order)
-
-        priority = self.gp_priority_hurt if player.hp <= self.hp_threshold else self.gp_priority_healthy
-        return first_affordable_gp(player, self._god_powers, priority, self.tier_order)
-
-
-class L2EconomyAgent(EconomyAgent):
-    """Economy pilot that uses Bragi only as an anti-race tool into Aggro."""
-
-    def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
-        player = state.p1 if player_num == 1 else state.p2
-        keep_faces = frozenset({
-            "FACE_HAND_BORDERED", "FACE_HAND", "FACE_AXE",
-            "FACE_HELMET", "FACE_SHIELD",
-        })
-        return choose_keep_by_faces(player, keep_faces)
-
-    def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
-        opp = state.p2 if player_num == 1 else state.p1
-
-        opp_axes = opp.dice_faces.count("FACE_AXE")
-        opp_arrows = opp.dice_faces.count("FACE_ARROW")
-        my_helmets = player.dice_faces.count("FACE_HELMET")
-        my_shields = player.dice_faces.count("FACE_SHIELD")
-        predicted_incoming = max(
-            0,
-            (opp_axes + opp_arrows)
-            - (min(opp_axes, my_helmets) + min(opp_arrows, my_shields)),
-        )
-
-        if "GP_SURTRS_FLAME" in opp.gp_loadout and predicted_incoming >= 2:
-            choice = try_gp(player, self._god_powers, "GP_BRAGIS_SONG", self.tier_order)
-            if choice is not None:
-                return choice
-
-        choice = try_gp(player, self._god_powers, "GP_MJOLNIRS_WRATH", self.tier_order)
-        if choice is not None:
-            return choice
-
-        return try_gp(player, self._god_powers, "GP_GULLVEIGS_HOARD", self.tier_order)
 
 
 ARCHETYPES: dict[str, Archetype] = {
@@ -138,7 +67,7 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
         ),
         gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=L2ControlAgent,
+        agent_cls=MatchupAwareControlAgent,
     ),
     "ECONOMY": Archetype(
         name="ECONOMY",
@@ -147,7 +76,7 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
         ),
         gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=L2EconomyAgent,
+        agent_cls=MatchupAwareEconomyAgent,
     ),
 }
 
@@ -158,6 +87,7 @@ ARCHETYPES: dict[str, Archetype] = {
 
 
 def _resolve_dice(die_types, ids):
+    """Turn a tuple of die ids into the concrete `DieType` loadout."""
     return [die_types[d] for d in ids]
 
 
@@ -167,7 +97,7 @@ def run_matchup(
     games: int,
     rng: np.random.Generator,
 ) -> dict:
-    """Play `games` games of p1 vs p2. Return summary metrics."""
+    """Play one directional archetype matchup and return summary metrics."""
     die_types = load_die_types()
     p1_dice = _resolve_dice(die_types, p1_arch.dice_ids)
     p2_dice = _resolve_dice(die_types, p2_arch.dice_ids)
@@ -230,6 +160,7 @@ def run_matchup(
 
 
 def run_matrix(games: int, seed: int = 42) -> dict[tuple[str, str], dict]:
+    """Run the full 3x3 matrix, including mirrors, for reporting purposes."""
     names = list(ARCHETYPES.keys())
     rng = np.random.default_rng(seed)
     results: dict[tuple[str, str], dict] = {}
@@ -242,10 +173,12 @@ def run_matrix(games: int, seed: int = 42) -> dict[tuple[str, str], dict]:
 
 
 def _format_pct(x: float) -> str:
+    """Format a percentage for the printed matrix table."""
     return f"{x:5.1f}"
 
 
 def print_matrix(results: dict[tuple[str, str], dict]) -> None:
+    """Print the human-readable L2 balance report."""
     names = list(ARCHETYPES.keys())
 
     print()
@@ -309,12 +242,13 @@ def print_matrix(results: dict[tuple[str, str], dict]) -> None:
 
 
 def main() -> None:
+    """CLI entrypoint for the tuned L2 balance matrix harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=2000, help="games per cell")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")
     args = parser.parse_args()
 
-    print(f"Running L2 three-archetype matrix: {args.games} games/cell, seed={args.seed}")
+    print(f"Running L2 balance matrix: {args.games} games/cell, seed={args.seed}")
     results = run_matrix(args.games, args.seed)
     print_matrix(results)
 

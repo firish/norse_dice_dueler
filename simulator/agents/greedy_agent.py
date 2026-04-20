@@ -42,6 +42,7 @@ class GreedyAgent(Agent):
         self._god_powers = load_god_powers()
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
+        """Keep the simple offensive/token face set used by the L1 baseline."""
         player = state.p1 if player_num == 1 else state.p2
         return frozenset(
             i for i, (face, kept) in enumerate(zip(player.dice_faces, player.dice_kept))
@@ -49,6 +50,7 @@ class GreedyAgent(Agent):
         )
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
+        """Cast a random affordable T1 GP from the player's current loadout."""
         player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
 
         affordable: list[tuple[str, int]] = []

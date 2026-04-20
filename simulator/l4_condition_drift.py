@@ -1,16 +1,13 @@
-"""
-l4_conditions.py
-----------------
-L4 Battlefield Conditions drift harness.
+"""L4 battlefield-condition drift harness.
 
 Uses the current L3B advanced-dice baseline and measures how much each current
 condition shifts the 3x3 directional matrix relative to the no-condition
 baseline.
 
 Run:
-    python -m simulator.l4_conditions
-    python -m simulator.l4_conditions --games 120
-    python -m simulator.l4_conditions --condition COND_RAGNAROK --games 240
+    python -m simulator.l4_condition_drift
+    python -m simulator.l4_condition_drift --games 120
+    python -m simulator.l4_condition_drift --condition COND_RAGNAROK --games 240
 """
 
 from __future__ import annotations
@@ -23,18 +20,20 @@ import numpy as np
 
 from simulator.game_engine import GameEngine
 from simulator.game_state import GamePhase
-from simulator.l3b_advanced_dice import ARCHETYPES, TARGETS
+from simulator.l3_advanced_dice_pool import ARCHETYPES, TARGETS
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
 DRIFT_PASS_THRESHOLD = 10.0
 
 
 def load_conditions() -> list[dict]:
+    """Load the current location roster from the JSON data file."""
     path = DATA_DIR / "conditions.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _resolve_dice(ids: tuple[str, ...]):
+    """Resolve die ids into the concrete six-die loadout."""
     from simulator.die_types import load_die_types
 
     die_types = load_die_types()
@@ -42,6 +41,7 @@ def _resolve_dice(ids: tuple[str, ...]):
 
 
 def run_matchup(p1_arch, p2_arch, games: int, rng: np.random.Generator, condition_id: str | None) -> dict:
+    """Run one directional matchup with an optional single active condition."""
     p1_dice = _resolve_dice(p1_arch.dice_ids)
     p2_dice = _resolve_dice(p2_arch.dice_ids)
 
@@ -75,6 +75,7 @@ def run_matchup(p1_arch, p2_arch, games: int, rng: np.random.Generator, conditio
 
 
 def run_matrix(games: int, seed: int, condition_id: str | None) -> dict[tuple[str, str], dict]:
+    """Run the full off-diagonal matrix for one condition (or baseline if none)."""
     rng = np.random.default_rng(seed)
     results: dict[tuple[str, str], dict] = {}
     for p1 in ARCHETYPES:
@@ -86,6 +87,7 @@ def run_matrix(games: int, seed: int, condition_id: str | None) -> dict[tuple[st
 
 
 def matrix_error(results: dict[tuple[str, str], dict]) -> float:
+    """Return absolute error from the target directional matrix."""
     return sum(abs(results[key]["p1_rate"] - target) for key, target in TARGETS.items())
 
 
@@ -93,6 +95,7 @@ def max_drift(
     baseline: dict[tuple[str, str], dict],
     condition_results: dict[tuple[str, str], dict],
 ) -> float:
+    """Return the worst absolute directional swing versus the no-condition baseline."""
     return max(abs(condition_results[key]["p1_rate"] - baseline[key]["p1_rate"]) for key in TARGETS)
 
 
@@ -101,6 +104,7 @@ def print_condition_report(
     baseline: dict[tuple[str, str], dict],
     results: dict[tuple[str, str], dict],
 ) -> None:
+    """Print one condition's drift report versus the baseline matrix."""
     drift = max_drift(baseline, results)
     verdict = "PASS" if drift <= DRIFT_PASS_THRESHOLD else "TUNE"
     print(f"{condition['id']} - {condition['display_name']} [{verdict}]")
@@ -126,6 +130,7 @@ def print_condition_report(
 
 
 def print_baseline(results: dict[tuple[str, str], dict]) -> None:
+    """Print the no-condition L3B baseline used by the drift sweep."""
     print("L4 CONDITIONS BASELINE")
     print("Baseline package: L3B fixed rule")
     print("  Aggro   = 3 Warrior + 2 Berserker + 1 Gambler")
@@ -146,6 +151,7 @@ def print_baseline(results: dict[tuple[str, str], dict]) -> None:
 
 
 def main() -> None:
+    """CLI entrypoint for the single-condition drift harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=120, help="games per directional matchup")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")

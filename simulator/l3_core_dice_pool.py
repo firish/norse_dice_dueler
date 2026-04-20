@@ -1,7 +1,4 @@
-"""
-l3a_dice_pool.py
-----------------
-First constrained L3 dice-pool harness for the 3-archetype branch.
+"""Core-dice constrained L3 harness for the tuned three-archetype branch.
 
 Rule:
   - Every loadout starts with 3x DIE_WARRIOR.
@@ -13,9 +10,9 @@ Rule:
 This keeps deckbuilding expressive while preserving archetype identity.
 
 Run:
-    python -m simulator.l3a_dice_pool
-    python -m simulator.l3a_dice_pool --games 120 --top 8
-    python -m simulator.l3a_dice_pool --validate A_CORE31,C_CORE21,E_CORE21
+    python -m simulator.l3_core_dice_pool
+    python -m simulator.l3_core_dice_pool --games 120 --top 8
+    python -m simulator.l3_core_dice_pool --validate A_CORE31,C_CORE21,E_CORE21
 """
 
 from __future__ import annotations
@@ -27,10 +24,11 @@ from itertools import product
 import numpy as np
 
 from simulator.agents.aggro_agent import AggroAgent
+from simulator.agents.control_agent import MatchupAwareControlAgent
+from simulator.agents.economy_agent import MatchupAwareEconomyAgent
 from simulator.die_types import load_die_types
 from simulator.game_engine import GameEngine
 from simulator.game_state import GamePhase
-from simulator.l2_three_arch import L2ControlAgent, L2EconomyAgent
 
 TARGETS: dict[tuple[str, str], float] = {
     ("AGGRO", "CONTROL"): 40.0,
@@ -44,6 +42,8 @@ TARGETS: dict[tuple[str, str], float] = {
 
 @dataclass(frozen=True)
 class ArchetypeLoadout:
+    """Concrete legal loadout inside the L3 core-dice grammar."""
+
     name: str
     archetype: str
     dice_ids: tuple[str, ...]
@@ -61,6 +61,7 @@ def _make_loadout(
     core_count: int,
     support_count: int,
 ) -> ArchetypeLoadout:
+    """Build one constrained loadout from a core/support split."""
     assert core_count + support_count == 3
     dice_ids = ("DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR") + (core_die,) * core_count + (support_die,) * support_count
     return ArchetypeLoadout(
@@ -94,17 +95,17 @@ CONTROL_CANDIDATES: dict[str, ArchetypeLoadout] = {
     "C_CORE30": _make_loadout(
         "C_CORE30", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
         ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        L2ControlAgent, 3, 0,
+        MatchupAwareControlAgent, 3, 0,
     ),
     "C_CORE21": _make_loadout(
         "C_CORE21", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
         ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        L2ControlAgent, 2, 1,
+        MatchupAwareControlAgent, 2, 1,
     ),
     "C_CORE12": _make_loadout(
         "C_CORE12", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
         ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        L2ControlAgent, 1, 2,
+        MatchupAwareControlAgent, 1, 2,
     ),
 }
 
@@ -112,22 +113,23 @@ ECONOMY_CANDIDATES: dict[str, ArchetypeLoadout] = {
     "E_CORE30": _make_loadout(
         "E_CORE30", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
         ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        L2EconomyAgent, 3, 0,
+        MatchupAwareEconomyAgent, 3, 0,
     ),
     "E_CORE21": _make_loadout(
         "E_CORE21", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
         ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        L2EconomyAgent, 2, 1,
+        MatchupAwareEconomyAgent, 2, 1,
     ),
     "E_CORE12": _make_loadout(
         "E_CORE12", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
         ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        L2EconomyAgent, 1, 2,
+        MatchupAwareEconomyAgent, 1, 2,
     ),
 }
 
 
 def _resolve_dice(ids: tuple[str, ...]):
+    """Resolve die ids into the concrete six-die loadout."""
     die_types = load_die_types()
     return [die_types[die_id] for die_id in ids]
 
@@ -138,6 +140,7 @@ def run_matchup(
     games: int,
     rng: np.random.Generator,
 ) -> dict:
+    """Run one directional matchup between two constrained L3 loadouts."""
     p1_dice = _resolve_dice(p1_arch.dice_ids)
     p2_dice = _resolve_dice(p2_arch.dice_ids)
 
@@ -177,6 +180,7 @@ def run_package(
     games: int,
     seed: int,
 ) -> dict[tuple[str, str], dict]:
+    """Run a full off-diagonal matrix for one candidate three-loadout package."""
     rng = np.random.default_rng(seed)
     archetypes = {"AGGRO": aggro, "CONTROL": control, "ECONOMY": economy}
     results: dict[tuple[str, str], dict] = {}
@@ -189,10 +193,12 @@ def run_package(
 
 
 def matrix_error(results: dict[tuple[str, str], dict]) -> float:
+    """Return absolute error from the target directional matrix."""
     return sum(abs(results[key]["p1_rate"] - target) for key, target in TARGETS.items())
 
 
 def print_results(name: str, results: dict[tuple[str, str], dict]) -> None:
+    """Print one package's directional matrix and aggregate error."""
     print(name)
     for matchup in (
         ("AGGRO", "CONTROL"),
@@ -208,12 +214,14 @@ def print_results(name: str, results: dict[tuple[str, str], dict]) -> None:
 
 
 def all_packages():
+    """Yield every legal Aggro/Control/Economy package in the L3A search space."""
     for a_name, c_name, e_name in product(AGGRO_CANDIDATES, CONTROL_CANDIDATES, ECONOMY_CANDIDATES):
         package_name = f"{a_name},{c_name},{e_name}"
         yield package_name, AGGRO_CANDIDATES[a_name], CONTROL_CANDIDATES[c_name], ECONOMY_CANDIDATES[e_name]
 
 
 def search_packages(games: int, seed: int, top: int) -> None:
+    """Score all legal packages and print the best few by matrix error."""
     scored: list[tuple[float, str, dict[tuple[str, str], dict]]] = []
     for package_name, aggro, control, economy in all_packages():
         results = run_package(aggro, control, economy, games, seed)
@@ -226,6 +234,7 @@ def search_packages(games: int, seed: int, top: int) -> None:
 
 
 def main() -> None:
+    """CLI entrypoint for the L3 core-dice harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=80, help="games per directional matchup")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")

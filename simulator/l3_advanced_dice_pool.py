@@ -1,7 +1,4 @@
-"""
-l3b_advanced_dice.py
---------------------
-Second constrained L3 harness for the 3-archetype branch.
+"""Advanced-dice constrained L3 harness for the tuned three-archetype branch.
 
 Rule:
   - Every loadout starts with 3x DIE_WARRIOR.
@@ -17,8 +14,8 @@ This tests whether a small amount of advanced specialization can be introduced
 without breaking the current 3-way balance.
 
 Run:
-    python -m simulator.l3b_advanced_dice
-    python -m simulator.l3b_advanced_dice --games 240
+    python -m simulator.l3_advanced_dice_pool
+    python -m simulator.l3_advanced_dice_pool --games 240
 """
 
 from __future__ import annotations
@@ -29,10 +26,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from simulator.agents.aggro_agent import AggroAgent
+from simulator.agents.control_agent import MatchupAwareControlAgent
+from simulator.agents.economy_agent import MatchupAwareEconomyAgent
 from simulator.die_types import load_die_types
 from simulator.game_engine import GameEngine
 from simulator.game_state import GamePhase
-from simulator.l2_three_arch import L2ControlAgent, L2EconomyAgent
 
 TARGETS: dict[tuple[str, str], float] = {
     ("AGGRO", "CONTROL"): 40.0,
@@ -46,6 +44,8 @@ TARGETS: dict[tuple[str, str], float] = {
 
 @dataclass(frozen=True)
 class Archetype:
+    """Fixed advanced-dice archetype definition for the L3B baseline."""
+
     name: str
     dice_ids: tuple[str, ...]
     gp_ids: tuple[str, ...]
@@ -69,7 +69,7 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARDEN", "DIE_WARDEN", "DIE_SKALD",
         ),
         gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=L2ControlAgent,
+        agent_cls=MatchupAwareControlAgent,
     ),
     "ECONOMY": Archetype(
         name="ECONOMY",
@@ -78,12 +78,13 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_MISER", "DIE_MISER", "DIE_HUNTER",
         ),
         gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=L2EconomyAgent,
+        agent_cls=MatchupAwareEconomyAgent,
     ),
 }
 
 
 def _resolve_dice(ids: tuple[str, ...]):
+    """Resolve die ids into the concrete six-die loadout."""
     die_types = load_die_types()
     return [die_types[die_id] for die_id in ids]
 
@@ -94,6 +95,7 @@ def run_matchup(
     games: int,
     rng: np.random.Generator,
 ) -> dict:
+    """Run one directional advanced-dice matchup and report decisive win rate."""
     p1_dice = _resolve_dice(p1_arch.dice_ids)
     p2_dice = _resolve_dice(p2_arch.dice_ids)
 
@@ -127,6 +129,7 @@ def run_matchup(
 
 
 def run_matrix(games: int, seed: int) -> dict[tuple[str, str], dict]:
+    """Run the L3B off-diagonal matrix for the approved advanced-dice baseline."""
     rng = np.random.default_rng(seed)
     results: dict[tuple[str, str], dict] = {}
     for p1 in ARCHETYPES:
@@ -138,10 +141,12 @@ def run_matrix(games: int, seed: int) -> dict[tuple[str, str], dict]:
 
 
 def matrix_error(results: dict[tuple[str, str], dict]) -> float:
+    """Return absolute error from the target directional matrix."""
     return sum(abs(results[key]["p1_rate"] - target) for key, target in TARGETS.items())
 
 
 def print_results(results: dict[tuple[str, str], dict]) -> None:
+    """Print the approved L3B baseline report."""
     print("L3B ADVANCED DICE")
     print("Rule: 3 Warrior + 2 core + 1 advanced")
     print("  Aggro   = 3 Warrior + 2 Berserker + 1 Gambler")
@@ -161,6 +166,7 @@ def print_results(results: dict[tuple[str, str], dict]) -> None:
 
 
 def main() -> None:
+    """CLI entrypoint for the L3 advanced-dice harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=240, help="games per directional matchup")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")

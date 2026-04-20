@@ -10,13 +10,13 @@ Pattern:
 Agents only need to supply actions for KEEP_1, KEEP_2, and GOD_POWER phases.
 All other phases advance automatically (no agent input required).
 
-L2 three-archetype scope:
+Current scope:
     - 9 God Powers (Surtr, Fenrir, Aegis, Eir, Bragi, Gullveig, Tyr, Frigg, Mjolnir).
     - T1 tiers only.
     - Combat thorns enabled: every 3 blocked damage reflects 1.
     - Bordered hands bank tokens before GP choice; plain hands still steal at round end.
     - Bragi can prevent some dice damage and reflect part of it back.
-    - Optional single Battlefield Condition support for L4 harnessing.
+    - Optional single or paired Battlefield Conditions for L4 harnessing.
     - No Runes (L5).
 """
 
@@ -94,6 +94,7 @@ class GameEngine:
         p2_gp_ids: tuple[str, ...] = (),
         god_powers: dict[str, GodPower] | None = None,
         condition_id: str | None = None,
+        condition_ids: tuple[str, ...] | None = None,
     ) -> None:
         assert len(p1_die_types) == NUM_DICE, f"P1 loadout must have {NUM_DICE} dice"
         assert len(p2_die_types) == NUM_DICE, f"P2 loadout must have {NUM_DICE} dice"
@@ -102,7 +103,13 @@ class GameEngine:
         self.rng = rng or np.random.default_rng()
         self.p1_gp_ids = p1_gp_ids
         self.p2_gp_ids = p2_gp_ids
-        self.condition_id = condition_id
+        if condition_ids is not None:
+            self.condition_ids = tuple(condition_ids)
+        elif condition_id is not None:
+            self.condition_ids = (condition_id,)
+        else:
+            self.condition_ids = ()
+        self.condition_id = self.condition_ids[0] if len(self.condition_ids) == 1 else None
         if god_powers is not None:
             self._god_powers = god_powers
         elif p1_gp_ids or p2_gp_ids:
@@ -110,17 +117,20 @@ class GameEngine:
         else:
             self._god_powers: dict = {}
 
-        self._starting_hp = STARTING_HP + 2 if self.condition_id == "COND_YGGDRASIL_ROOTS" else STARTING_HP
+        self._starting_hp = STARTING_HP + 2 if self._has_condition("COND_YGGDRASIL_ROOTS") else STARTING_HP
 
     def _has_condition(self, condition_id: str) -> bool:
-        return self.condition_id == condition_id
+        """Return whether the current game has an active condition id."""
+        return condition_id in self.condition_ids
 
     def _gp_cost(self, base_cost: int, round_num: int) -> int:
+        """Return the effective GP cost after condition-based modifiers."""
         if self._has_condition("COND_JOTUN_MIGHT") and base_cost >= 7:
             return max(1, base_cost - 1)
         return base_cost
 
     def _choice_cost(self, choice: tuple[str, int] | None) -> int:
+        """Look up the effective cost of a concrete GP choice tuple."""
         if choice is None:
             return 0
         gp_id, tier_idx = choice
@@ -134,6 +144,7 @@ class GameEngine:
     # ------------------------------------------------------------------
 
     def new_game(self) -> GameState:
+        """Construct the starting `GameState` for a fresh match."""
         return GameState(
             round_num=1,
             phase=GamePhase.REVEAL,
@@ -160,6 +171,7 @@ class GameEngine:
         p1_action: frozenset[int] | tuple[str, int] | None = None,
         p2_action: frozenset[int] | tuple[str, int] | None = None,
     ) -> tuple[GameState, list[GameEvent]]:
+        """Advance exactly one phase from the supplied immutable state."""
         phase = state.phase
         if phase == GamePhase.REVEAL:
             return self._phase_reveal(state)
@@ -191,6 +203,7 @@ class GameEngine:
         p1_agent: "Agent",
         p2_agent: "Agent",
     ) -> tuple[GameState, list[GameEvent]]:
+        """Advance from `REVEAL` through `END_CHECK` using the supplied agents."""
         all_events: list[GameEvent] = []
 
         def tick(p1_act=None, p2_act=None):
@@ -218,6 +231,7 @@ class GameEngine:
         p2_agent: "Agent",
         max_rounds: int = 100,
     ) -> tuple[GameState, list[GameEvent]]:
+        """Run a complete match until a winner is found or `max_rounds` is reached."""
         state = self.new_game()
         all_events: list[GameEvent] = []
 
@@ -241,10 +255,10 @@ class GameEngine:
     # ------------------------------------------------------------------
 
     def _phase_reveal(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
-        if self.condition_id is None:
+        if not self.condition_ids:
             return replace(state, phase=GamePhase.ROLL), []
         return replace(state, phase=GamePhase.ROLL), [
-            GameEvent("condition_active", {"condition_id": self.condition_id, "round": state.round_num})
+            GameEvent("condition_active", {"condition_ids": self.condition_ids, "round": state.round_num})
         ]
 
     def _phase_roll(self, state: GameState) -> tuple[GameState, list[GameEvent]]:
@@ -347,9 +361,9 @@ class GameEngine:
         ) -> PlayerState:
             if action is None:
                 return player
-            gp_id, tier_idx = action
-            if self._has_condition("COND_TYR_ARENA") and tier_idx >= 1:
+            if self._has_condition("COND_TYR_ARENA") and state.round_num == 1:
                 return player
+            gp_id, tier_idx = action
             if gp_id not in player.gp_loadout:
                 return player
             if tier_idx not in (0, 1, 2):

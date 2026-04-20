@@ -33,6 +33,7 @@ class RandomAgent(Agent):
         self.rng = rng or np.random.default_rng()
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
+        """Independently keep each currently unlocked die with 50% probability."""
         player = state.p1 if player_num == 1 else state.p2
         # Only offer the indices that are not yet locked in.
         available = [i for i, kept in enumerate(player.dice_kept) if not kept]

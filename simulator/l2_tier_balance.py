@@ -1,7 +1,4 @@
-"""
-l2_tiers_3.py
--------------
-L2 tier-escalation harness for the 3-archetype branch.
+"""L2 tier-escalation balance harness for the tuned three-archetype shell.
 
 Question:
   - If we re-enable T2/T3, does the same Aggro / Control / Economy shape survive?
@@ -12,9 +9,9 @@ Default behavior:
   - Report the best profiles by matrix error.
 
 Run:
-    python -m simulator.l2_tiers_3
-    python -m simulator.l2_tiers_3 --games 40 --top 10
-    python -m simulator.l2_tiers_3 --validate SURTR69_GULL710_MJ1418_BRAGI75_106
+    python -m simulator.l2_tier_balance
+    python -m simulator.l2_tier_balance --games 40 --top 10
+    python -m simulator.l2_tier_balance --validate SURTR69_GULL710_MJ1418_BRAGI75_106
 """
 
 from __future__ import annotations
@@ -25,13 +22,13 @@ from itertools import product
 
 import numpy as np
 
-from simulator.agents.aggro_agent import AggroAgent
-from simulator.agents import try_gp, with_banked_tokens
+from simulator.agents.aggro_agent import TierAwareAggroAgent
+from simulator.agents.control_agent import TierAwareControlAgent
+from simulator.agents.economy_agent import TierAwareEconomyAgent
 from simulator.die_types import load_die_types
 from simulator.game_engine import GameEngine
 from simulator.game_state import GamePhase
 from simulator.god_powers import GodPower, load_god_powers
-from simulator.l2_three_arch import L2ControlAgent, L2EconomyAgent
 
 TARGETS: dict[tuple[str, str], float] = {
     ("AGGRO", "CONTROL"): 40.0,
@@ -45,6 +42,8 @@ TARGETS: dict[tuple[str, str], float] = {
 
 @dataclass(frozen=True)
 class Archetype:
+    """Archetype definition used by the tier-balance harness."""
+
     name: str
     dice_ids: tuple[str, ...]
     gp_ids: tuple[str, ...]
@@ -53,6 +52,8 @@ class Archetype:
 
 @dataclass(frozen=True)
 class TierProfile:
+    """Compact description of the T2/T3 tuning knobs explored by the harness."""
+
     name: str
     control_soft: bool
     surtr_t2_cost: int
@@ -69,147 +70,6 @@ class TierProfile:
     bragi_t3_reflect: float
 
 
-class TierAggroAgent(AggroAgent):
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
-        super().__init__(rng=rng, tier_order=(2, 1, 0))
-
-    def choose_god_power(self, state, player_num: int):
-        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
-        opp = state.p2 if player_num == 1 else state.p1
-
-        if player.tokens >= 13 and opp.hp <= 7:
-            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (2,))
-            if choice is not None:
-                return choice
-        if player.tokens >= 9 and opp.hp <= 5:
-            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (1,))
-            if choice is not None:
-                return choice
-        if player.tokens >= 7:
-            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (0,))
-            if choice is not None:
-                return choice
-
-        if player.tokens >= 9 and opp.hp <= 5:
-            choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (2,))
-            if choice is not None:
-                return choice
-        if player.tokens >= 6 and opp.hp <= 3:
-            choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (1,))
-            if choice is not None:
-                return choice
-        return try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (0,)) or try_gp(
-            player, self._god_powers, "GP_TYRS_JUDGMENT", (1, 0, 2)
-        )
-
-
-class TierControlAgent(L2ControlAgent):
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
-        super().__init__(rng=rng, tier_order=(2, 1, 0))
-
-    def choose_god_power(self, state, player_num: int):
-        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
-        opp = with_banked_tokens(state.p2 if player_num == 1 else state.p1)
-
-        opp_axes = opp.dice_faces.count("FACE_AXE")
-        opp_arrows = opp.dice_faces.count("FACE_ARROW")
-        my_helmets = player.dice_faces.count("FACE_HELMET")
-        my_shields = player.dice_faces.count("FACE_SHIELD")
-        incoming = max(
-            0,
-            (opp_axes + opp_arrows)
-            - (min(opp_axes, my_helmets) + min(opp_arrows, my_shields)),
-        )
-        if "GP_SURTRS_FLAME" in opp.gp_loadout and opp.tokens >= 3:
-            incoming += 2
-        if "GP_MJOLNIRS_WRATH" in opp.gp_loadout and opp.tokens >= 8:
-            incoming += 3
-
-        if "GP_SURTRS_FLAME" in opp.gp_loadout:
-            if incoming >= 5 or (opp.tokens >= 7 and player.tokens >= 7):
-                choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (1, 0, 2))
-                if choice is not None:
-                    return choice
-            if incoming >= 3 or opp.tokens >= 3:
-                choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (0, 1, 2))
-                if choice is not None:
-                    return choice
-            if player.hp <= 9:
-                choice = try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (0, 1, 2))
-                if choice is not None:
-                    return choice
-            if player.hp <= 3:
-                return try_gp(player, self._god_powers, "GP_EIRS_MERCY", (1, 0, 2))
-
-        if player.hp <= 4:
-            return try_gp(player, self._god_powers, "GP_EIRS_MERCY", (2, 1, 0))
-        if player.hp <= 7:
-            choice = try_gp(player, self._god_powers, "GP_EIRS_MERCY", (1, 0, 2))
-            if choice is not None:
-                return choice
-
-        if incoming >= 7:
-            choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (2, 1, 0))
-            if choice is not None:
-                return choice
-        if incoming >= 5:
-            choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (1, 0, 2))
-            if choice is not None:
-                return choice
-        if incoming >= 2:
-            choice = try_gp(player, self._god_powers, "GP_AEGIS_OF_BALDR", (0, 1, 2))
-            if choice is not None:
-                return choice
-
-        if player.hp <= 8:
-            return try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (1, 0, 2))
-        return try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (0, 1, 2))
-
-
-class TierEconomyAgent(L2EconomyAgent):
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
-        super().__init__(rng=rng, tier_order=(2, 1, 0))
-
-    def choose_god_power(self, state, player_num: int):
-        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
-        opp = state.p2 if player_num == 1 else state.p1
-
-        opp_axes = opp.dice_faces.count("FACE_AXE")
-        opp_arrows = opp.dice_faces.count("FACE_ARROW")
-        my_helmets = player.dice_faces.count("FACE_HELMET")
-        my_shields = player.dice_faces.count("FACE_SHIELD")
-        predicted_incoming = max(
-            0,
-            (opp_axes + opp_arrows)
-            - (min(opp_axes, my_helmets) + min(opp_arrows, my_shields)),
-        )
-
-        if "GP_SURTRS_FLAME" in opp.gp_loadout and predicted_incoming >= 4:
-            choice = try_gp(player, self._god_powers, "GP_BRAGIS_SONG", (2, 1, 0))
-            if choice is not None:
-                return choice
-        if "GP_SURTRS_FLAME" in opp.gp_loadout and predicted_incoming >= 3:
-            choice = try_gp(player, self._god_powers, "GP_BRAGIS_SONG", (1, 0, 2))
-            if choice is not None:
-                return choice
-        if "GP_SURTRS_FLAME" in opp.gp_loadout and predicted_incoming >= 2:
-            choice = try_gp(player, self._god_powers, "GP_BRAGIS_SONG", (0, 1, 2))
-            if choice is not None:
-                return choice
-
-        for tier_idx in (2, 1, 0):
-            gp = self._god_powers["GP_MJOLNIRS_WRATH"]
-            tier = gp.tiers[tier_idx]
-            if player.tokens >= tier.cost and opp.hp <= tier.damage:
-                return ("GP_MJOLNIRS_WRATH", tier_idx)
-
-        choice = try_gp(player, self._god_powers, "GP_MJOLNIRS_WRATH", (1, 0, 2))
-        if choice is not None:
-            return choice
-
-        return try_gp(player, self._god_powers, "GP_GULLVEIGS_HOARD", (1, 0, 2))
-
-
 ARCHETYPES: dict[str, Archetype] = {
     "AGGRO": Archetype(
         name="AGGRO",
@@ -218,7 +78,7 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARRIOR", "DIE_WARRIOR",
         ),
         gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        agent_cls=TierAggroAgent,
+        agent_cls=TierAwareAggroAgent,
     ),
     "CONTROL": Archetype(
         name="CONTROL",
@@ -227,7 +87,7 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
         ),
         gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=TierControlAgent,
+        agent_cls=TierAwareControlAgent,
     ),
     "ECONOMY": Archetype(
         name="ECONOMY",
@@ -236,12 +96,13 @@ ARCHETYPES: dict[str, Archetype] = {
             "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
         ),
         gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=TierEconomyAgent,
+        agent_cls=TierAwareEconomyAgent,
     ),
 }
 
 
 def build_god_powers(profile: TierProfile) -> dict[str, GodPower]:
+    """Return a God Power table with the profile's T2/T3 overrides applied."""
     god_powers = load_god_powers()
 
     if profile.control_soft:
@@ -331,6 +192,7 @@ def build_god_powers(profile: TierProfile) -> dict[str, GodPower]:
 
 
 def generate_profiles() -> list[TierProfile]:
+    """Enumerate the compact search space of tier-balance candidates."""
     profiles: list[TierProfile] = []
     for (
         control_soft,
@@ -384,6 +246,7 @@ def generate_profiles() -> list[TierProfile]:
 
 
 def _resolve_dice(ids: tuple[str, ...]):
+    """Resolve die ids into the concrete six-die loadout."""
     die_types = load_die_types()
     return [die_types[die_id] for die_id in ids]
 
@@ -395,6 +258,7 @@ def run_matchup(
     games: int,
     rng: np.random.Generator,
 ) -> dict:
+    """Run one directional matchup under a specific tier profile."""
     p1_dice = _resolve_dice(p1_arch.dice_ids)
     p2_dice = _resolve_dice(p2_arch.dice_ids)
 
@@ -429,6 +293,7 @@ def run_matchup(
 
 
 def run_profile(profile: TierProfile, games: int, seed: int) -> dict[tuple[str, str], dict]:
+    """Run the full off-diagonal matrix for one tier profile."""
     rng = np.random.default_rng(seed)
     god_powers = build_god_powers(profile)
     results: dict[tuple[str, str], dict] = {}
@@ -441,10 +306,12 @@ def run_profile(profile: TierProfile, games: int, seed: int) -> dict[tuple[str, 
 
 
 def matrix_error(results: dict[tuple[str, str], dict]) -> float:
+    """Return absolute error from the target directional matrix."""
     return sum(abs(results[key]["p1_rate"] - target) for key, target in TARGETS.items())
 
 
 def print_results(name: str, results: dict[tuple[str, str], dict]) -> None:
+    """Print a compact report for one tier profile."""
     print(name)
     for matchup in (
         ("AGGRO", "CONTROL"),
@@ -460,6 +327,7 @@ def print_results(name: str, results: dict[tuple[str, str], dict]) -> None:
 
 
 def search_profiles(games: int, seed: int, top: int) -> None:
+    """Score the full profile search space and print the best candidates."""
     scored: list[tuple[float, TierProfile, dict[tuple[str, str], dict]]] = []
     for profile in generate_profiles():
         results = run_profile(profile, games, seed)
@@ -472,6 +340,7 @@ def search_profiles(games: int, seed: int, top: int) -> None:
 
 
 def main() -> None:
+    """CLI entrypoint for the tier-balance search and validation harness."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=40, help="games per directional matchup")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")

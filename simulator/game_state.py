@@ -49,7 +49,6 @@ class PlayerState:
     tokens: int                   # the number of accumalated god favor tokens
     dice_faces: tuple[str, ...]   # face IDs for each of the 6 dice in the loadout
     dice_kept: tuple[bool, ...]   # True = die is locked in for this round
-    bleed_stacks: int = 0                      # Fenrir's Bite DoT: 1 dmg/round per stack, decrements each round
     gp_loadout: tuple[str, ...] = ()          # GP IDs brought into the match (empty = L0, no GPs)
     gp_choice: tuple[str, int] | None = None  # (gp_id, tier_idx 0-2) chosen this round; None = pass
 
