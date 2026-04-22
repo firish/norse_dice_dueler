@@ -125,11 +125,11 @@ class GameEngine:
 
     def _gp_cost(self, base_cost: int, round_num: int) -> int:
         """Return the effective GP cost after condition-based modifiers."""
-        if self._has_condition("COND_JOTUN_MIGHT") and base_cost >= 7:
+        if self._has_condition("COND_JOTUN_MIGHT") and base_cost >= 8:
             return max(1, base_cost - 1)
         return base_cost
 
-    def _choice_cost(self, choice: tuple[str, int] | None) -> int:
+    def _choice_cost(self, choice: tuple[str, int] | None, round_num: int) -> int:
         """Look up the effective cost of a concrete GP choice tuple."""
         if choice is None:
             return 0
@@ -137,7 +137,7 @@ class GameEngine:
         gp = self._god_powers.get(gp_id)
         if gp is None:
             return 0
-        return self._gp_cost(gp.tiers[tier_idx].cost)
+        return self._gp_cost(gp.tiers[tier_idx].cost, round_num)
 
     # ------------------------------------------------------------------
     # Public API
@@ -163,6 +163,7 @@ class GameEngine:
                 gp_loadout=self.p2_gp_ids,
             ),
             winner=None,
+            condition_ids=self.condition_ids,
         )
 
     def step(
@@ -309,7 +310,7 @@ class GameEngine:
         p2_tokens = state.p2.tokens
         events: list[GameEvent] = []
 
-        if self._has_condition("COND_ODIN_GAZE") and next_phase == GamePhase.GOD_POWER and state.round_num <= 3:
+        if self._has_condition("COND_ODIN_GAZE") and next_phase == GamePhase.GOD_POWER and state.round_num <= 2:
             p1_kept = (True,) * NUM_DICE
             p2_kept = (True,) * NUM_DICE
 
@@ -339,7 +340,7 @@ class GameEngine:
         p1_banked = p1_bordered
         p2_banked = p2_bordered
         if self._has_condition("COND_FREYA_BLESSING"):
-            if state.round_num >= 5:
+            if state.round_num >= 6:
                 p1_banked += 1 if p1_bordered >= 2 else 0
                 p2_banked += 1 if p2_bordered >= 2 else 0
         p1 = replace(state.p1, tokens=state.p1.tokens + p1_banked)
@@ -416,10 +417,10 @@ class GameEngine:
         dmg_to_p2 = (p1_axes + p1_arrows) - p2_blocks + p1_thorns
         dmg_to_p1 = (p2_axes + p2_arrows) - p1_blocks + p2_thorns
 
-        if self._has_condition("COND_FENRIR_HUNT") and state.round_num >= 4:
-            if (p1_axes + p1_arrows) > 0 and (p1_axes + p1_arrows) - p2_blocks == 0:
+        if self._has_condition("COND_FENRIR_HUNT") and state.round_num >= 5:
+            if (p1_axes + p1_arrows) >= 3 and (p1_axes + p1_arrows) - p2_blocks == 0:
                 dmg_to_p2 += 1
-            if (p2_axes + p2_arrows) > 0 and (p2_axes + p2_arrows) - p1_blocks == 0:
+            if (p2_axes + p2_arrows) >= 3 and (p2_axes + p2_arrows) - p1_blocks == 0:
                 dmg_to_p1 += 1
 
         p1_bragi_reflect = 0
@@ -441,8 +442,8 @@ class GameEngine:
         p1_tokens = p1.tokens
         p2_tokens = p2.tokens
         if self._has_condition("COND_NIFLHEIM_CHILL"):
-            p1_tokens += 1 if p1_blocks >= 3 else 0
-            p2_tokens += 1 if p2_blocks >= 3 else 0
+            p1_tokens += 1 if p1_blocks >= 4 else 0
+            p2_tokens += 1 if p2_blocks >= 4 else 0
 
         new_state = replace(
             state,
@@ -501,9 +502,11 @@ class GameEngine:
             if p2.gp_choice is not None and p2_tier is not None:
                 p2_cancelled = True
                 if p1_tier.steal_tokens:
-                    p1_tokens += self._choice_cost(p2.gp_choice)
+                    p1_tokens += self._choice_cost(p2.gp_choice, state.round_num)
                 else:
-                    p2_tokens += int(self._choice_cost(p2.gp_choice) * p1_tier.refund_pct)
+                    p2_tokens += int(
+                        self._choice_cost(p2.gp_choice, state.round_num) * p1_tier.refund_pct
+                    )
                 events.append(GameEvent("gp_cancel", {"player": 1}))
             p1_cancelled = True  # Frigg has no offense/defense payload
 
@@ -511,9 +514,11 @@ class GameEngine:
             if p1.gp_choice is not None and p1_tier is not None:
                 p1_cancelled = True
                 if p2_tier.steal_tokens:
-                    p2_tokens += self._choice_cost(p1.gp_choice)
+                    p2_tokens += self._choice_cost(p1.gp_choice, state.round_num)
                 else:
-                    p1_tokens += int(self._choice_cost(p1.gp_choice) * p2_tier.refund_pct)
+                    p1_tokens += int(
+                        self._choice_cost(p1.gp_choice, state.round_num) * p2_tier.refund_pct
+                    )
                 events.append(GameEvent("gp_cancel", {"player": 2}))
             p2_cancelled = True
 
@@ -613,7 +618,7 @@ class GameEngine:
         p2 = state.p2
         events: list[GameEvent] = []
 
-        if self._has_condition("COND_RAGNAROK") and state.round_num >= 5:
+        if self._has_condition("COND_RAGNAROK") and state.round_num >= 6:
             p1 = replace(p1, hp=max(0, p1.hp - 1))
             p2 = replace(p2, hp=max(0, p2.hp - 1))
             events.append(GameEvent("condition_tick", {

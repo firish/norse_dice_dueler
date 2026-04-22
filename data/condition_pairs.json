@@ -1,71 +1,71 @@
 {
   "approved_pairs": [
     {
-      "ids": ["COND_ODIN_GAZE", "COND_FREYA_BLESSING"],
-      "max_drift_pp": 4.7,
+      "ids": ["COND_ODIN_GAZE", "COND_MIDGARD_HEARTH"],
+      "max_drift_pp": 5.6,
       "status": "approved"
     },
     {
-      "ids": ["COND_RAGNAROK", "COND_FREYA_BLESSING"],
-      "max_drift_pp": 5.1,
+      "ids": ["COND_FENRIR_HUNT", "COND_NIFLHEIM_CHILL"],
+      "max_drift_pp": 6.2,
       "status": "approved"
     },
     {
-      "ids": ["COND_MIDGARD_HEARTH", "COND_ODIN_GAZE"],
+      "ids": ["COND_FREYA_BLESSING", "COND_TYR_ARENA"],
       "max_drift_pp": 6.3,
       "status": "approved"
     },
     {
-      "ids": ["COND_LOKI_MISCHIEF", "COND_MIDGARD_HEARTH"],
-      "max_drift_pp": 7.2,
+      "ids": ["COND_LOKI_MISCHIEF", "COND_NIFLHEIM_CHILL"],
+      "max_drift_pp": 6.9,
       "status": "approved"
     },
     {
-      "ids": ["COND_JOTUN_MIGHT", "COND_MIDGARD_HEARTH"],
-      "max_drift_pp": 7.4,
+      "ids": ["COND_RAGNAROK", "COND_JOTUN_MIGHT"],
+      "max_drift_pp": 8.0,
       "status": "approved"
     },
     {
-      "ids": ["COND_TYR_ARENA", "COND_YGGDRASIL_ROOTS"],
-      "max_drift_pp": 7.4,
-      "status": "approved"
-    },
-    {
-      "ids": ["COND_RAGNAROK", "COND_YGGDRASIL_ROOTS"],
-      "max_drift_pp": 7.5,
-      "status": "approved"
-    },
-    {
-      "ids": ["COND_TYR_ARENA", "COND_JOTUN_MIGHT"],
-      "max_drift_pp": 7.5,
-      "status": "approved"
-    },
-    {
-      "ids": ["COND_JOTUN_MIGHT", "COND_FREYA_BLESSING"],
-      "max_drift_pp": 7.9,
-      "status": "approved"
-    },
-    {
-      "ids": ["COND_ODIN_GAZE", "COND_NIFLHEIM_CHILL"],
+      "ids": ["COND_YGGDRASIL_ROOTS", "COND_TYR_ARENA"],
       "max_drift_pp": 8.1,
+      "status": "approved"
+    },
+    {
+      "ids": ["COND_TYR_ARENA", "COND_LOKI_MISCHIEF"],
+      "max_drift_pp": 8.9,
+      "status": "approved"
+    },
+    {
+      "ids": ["COND_RAGNAROK", "COND_NIFLHEIM_CHILL"],
+      "max_drift_pp": 9.1,
+      "status": "approved"
+    },
+    {
+      "ids": ["COND_FENRIR_HUNT", "COND_LOKI_MISCHIEF"],
+      "max_drift_pp": 9.8,
       "status": "approved"
     }
   ],
   "reserve_pairs": [
     {
-      "ids": ["COND_TYR_ARENA", "COND_MIDGARD_HEARTH"],
-      "max_drift_pp": 8.5,
-      "status": "reserve"
+      "ids": ["COND_MIDGARD_HEARTH", "COND_FENRIR_HUNT"],
+      "max_drift_pp": 4.0,
+      "status": "low-impact-reserve"
     },
     {
-      "ids": ["COND_LOKI_MISCHIEF", "COND_YGGDRASIL_ROOTS"],
-      "max_drift_pp": 9.4,
-      "status": "reserve"
+      "ids": ["COND_FENRIR_HUNT", "COND_RAGNAROK"],
+      "max_drift_pp": 3.7,
+      "status": "low-impact-reserve"
     },
     {
-      "ids": ["COND_JOTUN_MIGHT", "COND_YGGDRASIL_ROOTS"],
-      "max_drift_pp": 9.9,
-      "status": "reserve"
+      "ids": ["COND_YGGDRASIL_ROOTS", "COND_NIFLHEIM_CHILL"],
+      "max_drift_pp": 10.0,
+      "status": "near-reserve"
+    },
+    {
+      "ids": ["COND_FENRIR_HUNT", "COND_TYR_ARENA"],
+      "max_drift_pp": 10.1,
+      "status": "near-reserve"
     }
   ]
 }

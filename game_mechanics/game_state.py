@@ -71,6 +71,7 @@ class GameState:
     p1: PlayerState         # the player 1 state at the current gamestate
     p2: PlayerState         # the player 2 state at the current gamestate
     winner: Optional[int]   # None = ongoing  |  1 = P1 wins  |  2 = P2 wins  |  0 = draw
+    condition_ids: tuple[str, ...] = ()  # active L4 battlefield condition ids
 
 
 @dataclass

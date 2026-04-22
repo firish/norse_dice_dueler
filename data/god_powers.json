@@ -123,9 +123,9 @@
       {
         "tier": "T1",
         "cost": 6,
-        "effect": "Prevent up to 3 dice-combat damage this round and reflect half of it back.",
+        "effect": "Prevent up to 4 dice-combat damage this round and reflect half of it back.",
         "damage": null,
-        "damage_reduction": 3,
+        "damage_reduction": 4,
         "reflect_pct": 0.5
       },
       {
@@ -150,10 +150,10 @@
     "tiers": [
       {
         "tier": "T1",
-        "cost": 3,
-        "effect": "Gain 4 tokens (net +1).",
+        "cost": 2,
+        "effect": "Gain 3 tokens (net +1).",
         "damage": null,
-        "token_gain": 4
+        "token_gain": 3
       },
       {
         "tier": "T2",
@@ -180,8 +180,8 @@
       {
         "tier": "T1",
         "cost": 5,
-        "effect": "Deal 3 damage. Block next 2 damage.",
-        "damage": 3,
+        "effect": "Deal 2 damage. Block next 2 damage.",
+        "damage": 2,
         "block_amount": 2
       },
       {

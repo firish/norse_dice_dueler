@@ -22,8 +22,8 @@ import argparse
 
 import numpy as np
 
-from agents.greedy_agent import GreedyAgent
-from agents.random_agent import RandomAgent
+from agents.rule_based.greedy_agent import GreedyAgent
+from agents.rule_based.random_agent import RandomAgent
 from game_mechanics.die_types import load_die_types
 from game_mechanics.game_engine import GameEngine
 from game_mechanics.game_state import GamePhase

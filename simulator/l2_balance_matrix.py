@@ -28,9 +28,12 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from agents.aggro_agent import AggroAgent
-from agents.control_agent import MatchupAwareControlAgent
-from agents.economy_agent import MatchupAwareEconomyAgent
+from agents.rule_based.aggro_agent import AggroAgent
+from agents.rule_based.control_agent import MatchupAwareControlAgent
+from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
+from agents.game_aware.aggro_agent import GameAwareAggroAgent
+from agents.game_aware.control_agent import GameAwareControlAgent
+from agents.game_aware.economy_agent import GameAwareEconomyAgent
 from game_mechanics.die_types import load_die_types
 from game_mechanics.game_engine import GameEngine
 from game_mechanics.game_state import GamePhase
@@ -50,35 +53,55 @@ class Archetype:
     agent_cls: type
 
 
-ARCHETYPES: dict[str, Archetype] = {
-    "AGGRO": Archetype(
-        name="AGGRO",
-        dice_ids=(
-            "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
-            "DIE_WARRIOR",   "DIE_WARRIOR",
+def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
+    """Build the fixed L2 archetype set using the requested agent family."""
+    if agent_mode == "rule-based":
+        agent_classes = {
+            "AGGRO": AggroAgent,
+            "CONTROL": MatchupAwareControlAgent,
+            "ECONOMY": MatchupAwareEconomyAgent,
+        }
+    elif agent_mode == "game-aware":
+        agent_classes = {
+            "AGGRO": GameAwareAggroAgent,
+            "CONTROL": GameAwareControlAgent,
+            "ECONOMY": GameAwareEconomyAgent,
+        }
+    else:
+        raise ValueError(f"Unknown agent mode: {agent_mode}")
+
+    return {
+        "AGGRO": Archetype(
+            name="AGGRO",
+            dice_ids=(
+                "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
+                "DIE_WARRIOR",   "DIE_WARRIOR",
+            ),
+            gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
+            agent_cls=agent_classes["AGGRO"],
         ),
-        gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        agent_cls=AggroAgent,
-    ),
-    "CONTROL": Archetype(
-        name="CONTROL",
-        dice_ids=(
-            "DIE_WARDEN", "DIE_WARDEN", "DIE_WARDEN",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+        "CONTROL": Archetype(
+            name="CONTROL",
+            dice_ids=(
+                "DIE_WARDEN", "DIE_WARDEN", "DIE_WARDEN",
+                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+            ),
+            gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
+            agent_cls=agent_classes["CONTROL"],
         ),
-        gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=MatchupAwareControlAgent,
-    ),
-    "ECONOMY": Archetype(
-        name="ECONOMY",
-        dice_ids=(
-            "DIE_MISER", "DIE_MISER", "DIE_MISER",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+        "ECONOMY": Archetype(
+            name="ECONOMY",
+            dice_ids=(
+                "DIE_MISER", "DIE_MISER", "DIE_MISER",
+                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+            ),
+            gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
+            agent_cls=agent_classes["ECONOMY"],
         ),
-        gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=MatchupAwareEconomyAgent,
-    ),
-}
+    }
+
+
+ARCHETYPES: dict[str, Archetype] = build_archetypes()
 
 
 # ---------------------------------------------------------------------------
@@ -159,15 +182,16 @@ def run_matchup(
 # ---------------------------------------------------------------------------
 
 
-def run_matrix(games: int, seed: int = 42) -> dict[tuple[str, str], dict]:
+def run_matrix(games: int, seed: int = 42, agent_mode: str = "rule-based") -> dict[tuple[str, str], dict]:
     """Run the full 3x3 matrix, including mirrors, for reporting purposes."""
-    names = list(ARCHETYPES.keys())
+    archetypes = build_archetypes(agent_mode)
+    names = list(archetypes.keys())
     rng = np.random.default_rng(seed)
     results: dict[tuple[str, str], dict] = {}
 
     for p1 in names:
         for p2 in names:
-            r = run_matchup(ARCHETYPES[p1], ARCHETYPES[p2], games, rng)
+            r = run_matchup(archetypes[p1], archetypes[p2], games, rng)
             results[(p1, p2)] = r
     return results
 
@@ -246,10 +270,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--games", type=int, default=2000, help="games per cell")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")
+    parser.add_argument(
+        "--agent-mode",
+        choices=("rule-based", "game-aware"),
+        default="rule-based",
+        help="agent family to use for the archetype pilots",
+    )
     args = parser.parse_args()
 
-    print(f"Running L2 balance matrix: {args.games} games/cell, seed={args.seed}")
-    results = run_matrix(args.games, args.seed)
+    print(
+        f"Running L2 balance matrix: {args.games} games/cell, "
+        f"seed={args.seed}, agent_mode={args.agent_mode}"
+    )
+    results = run_matrix(args.games, args.seed, args.agent_mode)
     print_matrix(results)
 
 

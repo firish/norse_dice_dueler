@@ -22,9 +22,9 @@ from itertools import product
 
 import numpy as np
 
-from agents.aggro_agent import TierAwareAggroAgent
-from agents.control_agent import TierAwareControlAgent
-from agents.economy_agent import TierAwareEconomyAgent
+from agents.rule_based.aggro_agent import TierAwareAggroAgent
+from agents.rule_based.control_agent import TierAwareControlAgent
+from agents.rule_based.economy_agent import TierAwareEconomyAgent
 from game_mechanics.die_types import load_die_types
 from game_mechanics.game_engine import GameEngine
 from game_mechanics.game_state import GamePhase

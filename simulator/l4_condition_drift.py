@@ -20,7 +20,7 @@ import numpy as np
 
 from game_mechanics.game_engine import GameEngine
 from game_mechanics.game_state import GamePhase
-from simulator.l3_advanced_dice_pool import ARCHETYPES, TARGETS
+from simulator.l3_advanced_dice_pool import TARGETS, build_archetypes
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
 DRIFT_PASS_THRESHOLD = 10.0
@@ -74,15 +74,21 @@ def run_matchup(p1_arch, p2_arch, games: int, rng: np.random.Generator, conditio
     return {"p1_rate": p1_rate, "draws": draws}
 
 
-def run_matrix(games: int, seed: int, condition_id: str | None) -> dict[tuple[str, str], dict]:
+def run_matrix(
+    games: int,
+    seed: int,
+    condition_id: str | None,
+    agent_mode: str = "rule-based",
+) -> dict[tuple[str, str], dict]:
     """Run the full off-diagonal matrix for one condition (or baseline if none)."""
+    archetypes = build_archetypes(agent_mode)
     rng = np.random.default_rng(seed)
     results: dict[tuple[str, str], dict] = {}
-    for p1 in ARCHETYPES:
-        for p2 in ARCHETYPES:
+    for p1 in archetypes:
+        for p2 in archetypes:
             if p1 == p2:
                 continue
-            results[(p1, p2)] = run_matchup(ARCHETYPES[p1], ARCHETYPES[p2], games, rng, condition_id)
+            results[(p1, p2)] = run_matchup(archetypes[p1], archetypes[p2], games, rng, condition_id)
     return results
 
 
@@ -156,9 +162,16 @@ def main() -> None:
     parser.add_argument("--games", type=int, default=120, help="games per directional matchup")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed")
     parser.add_argument("--condition", type=str, default="", help="evaluate only one condition id")
+    parser.add_argument(
+        "--agent-mode",
+        choices=("rule-based", "game-aware"),
+        default="rule-based",
+        help="agent family to use for the archetype pilots",
+    )
     args = parser.parse_args()
 
-    baseline = run_matrix(args.games, args.seed, None)
+    print(f"Agent mode: {args.agent_mode}")
+    baseline = run_matrix(args.games, args.seed, None, args.agent_mode)
     print_baseline(baseline)
 
     conditions = load_conditions()
@@ -169,7 +182,7 @@ def main() -> None:
 
     reports = []
     for condition in conditions:
-        results = run_matrix(args.games, args.seed, condition["id"])
+        results = run_matrix(args.games, args.seed, condition["id"], args.agent_mode)
         reports.append((max_drift(baseline, results), condition, results))
 
     reports.sort(key=lambda item: item[0])
