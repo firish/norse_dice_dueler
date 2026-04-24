@@ -1,4 +1,11 @@
-"""L1 validation: simple GP user versus the no-GP random baseline.
+"""L1 benchmark: simple GP user versus the no-GP random baseline.
+
+What this file does:
+  - Measures whether basic GP access beats a no-GP baseline.
+
+What this file does not do:
+  - Search for the best GP values.
+  - Tune archetype balance.
 
 Setup:
   - Both players use the same mirror die loadout.

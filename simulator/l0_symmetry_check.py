@@ -1,4 +1,11 @@
-"""L0 symmetry check: RandomAgent mirrors with no God Powers.
+"""L0 symmetry benchmark: RandomAgent mirrors with no God Powers.
+
+What this file does:
+  - Runs a fixed mirror baseline to verify die symmetry and engine fairness.
+
+What this file does not do:
+  - Search over values or loadouts.
+  - Evaluate archetype balance.
 
 Defaults:
   - 6x Warrior die on both sides

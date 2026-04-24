@@ -1,4 +1,12 @@
-"""L2 balance matrix for the tuned three-archetype shell.
+"""L2 benchmark: balance matrix for the tuned three-archetype shell.
+
+What this file does:
+  - Runs the fixed L2 Aggro / Control / Economy 3x3 matrix.
+  - Reports how close the current shell is to the intended RPS targets.
+
+What this file does not do:
+  - Search over candidate GP values.
+  - Explore alternate loadout grammars.
 
 Goal: validate a clean 3x3 rock-paper-scissors matchup matrix using only
   - 4 dice (Warrior, Berserker, Warden, Miser)
@@ -24,9 +32,6 @@ Run:
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
-
-import numpy as np
 
 from agents.rule_based.aggro_agent import AggroAgent
 from agents.rule_based.control_agent import MatchupAwareControlAgent
@@ -34,23 +39,13 @@ from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
 from agents.game_aware.aggro_agent import GameAwareAggroAgent
 from agents.game_aware.control_agent import GameAwareControlAgent
 from agents.game_aware.economy_agent import GameAwareEconomyAgent
-from game_mechanics.die_types import load_die_types
-from game_mechanics.game_engine import GameEngine
-from game_mechanics.game_state import GamePhase
+from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
+from simulator.common.harness_types import Archetype
+from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 
 # ---------------------------------------------------------------------------
 # Archetype definitions
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Archetype:
-    """Fixed archetype definition used by a benchmark harness."""
-
-    name: str
-    dice_ids: tuple[str, ...]
-    gp_ids: tuple[str, ...]
-    agent_cls: type
 
 
 def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
@@ -105,79 +100,6 @@ ARCHETYPES: dict[str, Archetype] = build_archetypes()
 
 
 # ---------------------------------------------------------------------------
-# Simulation helpers
-# ---------------------------------------------------------------------------
-
-
-def _resolve_dice(die_types, ids):
-    """Turn a tuple of die ids into the concrete `DieType` loadout."""
-    return [die_types[d] for d in ids]
-
-
-def run_matchup(
-    p1_arch: Archetype,
-    p2_arch: Archetype,
-    games: int,
-    rng: np.random.Generator,
-) -> dict:
-    """Play one directional archetype matchup and return summary metrics."""
-    die_types = load_die_types()
-    p1_dice = _resolve_dice(die_types, p1_arch.dice_ids)
-    p2_dice = _resolve_dice(die_types, p2_arch.dice_ids)
-
-    p1_wins = 0
-    p2_wins = 0
-    draws = 0
-    total_rounds = 0
-    total_winner_hp = 0
-    close_matches = 0
-
-    for _ in range(games):
-        engine = GameEngine(
-            p1_die_types=p1_dice,
-            p2_die_types=p2_dice,
-            rng=rng,
-            p1_gp_ids=p1_arch.gp_ids,
-            p2_gp_ids=p2_arch.gp_ids,
-        )
-        p1_agent = p1_arch.agent_cls(rng=rng)
-        p2_agent = p2_arch.agent_cls(rng=rng)
-        state, _ = engine.run_game(p1_agent, p2_agent)
-
-        assert state.phase == GamePhase.GAME_OVER
-        if state.winner == 1:
-            p1_wins += 1
-            winner_hp = state.p1.hp
-            loser_hp = state.p2.hp
-        elif state.winner == 2:
-            p2_wins += 1
-            winner_hp = state.p2.hp
-            loser_hp = state.p1.hp
-        else:
-            draws += 1
-            winner_hp = 0
-            loser_hp = 0
-
-        total_rounds += state.round_num
-        total_winner_hp += winner_hp
-        if winner_hp - loser_hp <= 4 and state.winner != 0:
-            close_matches += 1
-
-    decisive = p1_wins + p2_wins
-    p1_rate_decisive = (p1_wins / decisive * 100) if decisive else 0.0
-
-    return {
-        "p1_wins": p1_wins,
-        "p2_wins": p2_wins,
-        "draws": draws,
-        "p1_win_rate_decisive": p1_rate_decisive,
-        "avg_rounds": total_rounds / games,
-        "avg_winner_hp": (total_winner_hp / decisive) if decisive else 0.0,
-        "close_match_rate": (close_matches / games * 100),
-    }
-
-
-# ---------------------------------------------------------------------------
 # Matrix runner
 # ---------------------------------------------------------------------------
 
@@ -185,15 +107,7 @@ def run_matchup(
 def run_matrix(games: int, seed: int = 42, agent_mode: str = "rule-based") -> dict[tuple[str, str], dict]:
     """Run the full 3x3 matrix, including mirrors, for reporting purposes."""
     archetypes = build_archetypes(agent_mode)
-    names = list(archetypes.keys())
-    rng = np.random.default_rng(seed)
-    results: dict[tuple[str, str], dict] = {}
-
-    for p1 in names:
-        for p2 in names:
-            r = run_matchup(archetypes[p1], archetypes[p2], games, rng)
-            results[(p1, p2)] = r
-    return results
+    return run_archetype_matrix(archetypes, games, seed, include_mirrors=True)
 
 
 def _format_pct(x: float) -> str:
@@ -268,14 +182,9 @@ def print_matrix(results: dict[tuple[str, str], dict]) -> None:
 def main() -> None:
     """CLI entrypoint for the tuned L2 balance matrix harness."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--games", type=int, default=2000, help="games per cell")
-    parser.add_argument("--seed", type=int, default=42, help="RNG seed")
-    parser.add_argument(
-        "--agent-mode",
-        choices=("rule-based", "game-aware"),
-        default="rule-based",
-        help="agent family to use for the archetype pilots",
-    )
+    add_games_arg(parser, default=2000, help_text="games per cell")
+    add_seed_arg(parser)
+    add_agent_mode_arg(parser)
     args = parser.parse_args()
 
     print(

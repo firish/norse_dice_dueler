@@ -1,5 +1,13 @@
 """Head-to-head diagnostics for rule-based vs game-aware agents.
 
+What this file does:
+  - Runs fixed A/B comparisons between agent families on the same content.
+  - Helps spot decision mistakes before we retune balance values.
+
+What this file does not do:
+  - Search over parameter spaces.
+  - Tune balance automatically.
+
 The balance matrix tells us how the meta shifts when we swap agent families.
 This harness answers the smaller question we need before retuning values:
 

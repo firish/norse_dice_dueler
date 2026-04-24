@@ -1,4 +1,12 @@
-"""L2 identity check for the tuned three-archetype branch.
+"""L2 benchmark: identity check for the tuned three-archetype branch.
+
+What this file does:
+  - Verifies that the intended Aggro / Control / Economy direction exists.
+  - Acts as a lighter-weight L2 sanity check before full balance validation.
+
+What this file does not do:
+  - Prove final matchup magnitudes are correct.
+  - Search over tuning candidates.
 
 Purpose:
   - Verify that the Aggro / Control / Economy loop exists at all.
@@ -19,26 +27,14 @@ Run:
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
-
-import numpy as np
 
 from agents.rule_based.aggro_agent import AggroAgent
 from agents.rule_based.control_agent import MatchupAwareControlAgent
 from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
-from game_mechanics.die_types import load_die_types
-from game_mechanics.game_engine import GameEngine
-from game_mechanics.game_state import GamePhase
-
-
-@dataclass(frozen=True)
-class Archetype:
-    """Minimal archetype definition used by the identity harness."""
-
-    name: str
-    dice_ids: tuple[str, ...]
-    gp_ids: tuple[str, ...]
-    agent_cls: type
+from simulator.common.cli import add_games_arg, add_seed_arg
+from simulator.common.harness_types import Archetype
+from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
+from simulator.common.reporting import print_directional_rows
 
 
 ARCHETYPES: dict[str, Archetype] = {
@@ -72,57 +68,9 @@ ARCHETYPES: dict[str, Archetype] = {
 }
 
 
-def _resolve_dice(ids: tuple[str, ...]):
-    """Resolve die ids into the concrete 6-die loadout for a matchup."""
-    die_types = load_die_types()
-    return [die_types[die_id] for die_id in ids]
-
-
-def run_matchup(p1_arch: Archetype, p2_arch: Archetype, games: int, rng: np.random.Generator) -> dict:
-    """Run a directional identity matchup and report decisive win rate plus draws."""
-    p1_dice = _resolve_dice(p1_arch.dice_ids)
-    p2_dice = _resolve_dice(p2_arch.dice_ids)
-
-    p1_wins = 0
-    p2_wins = 0
-    draws = 0
-
-    for _ in range(games):
-        engine = GameEngine(
-            p1_die_types=p1_dice,
-            p2_die_types=p2_dice,
-            rng=rng,
-            p1_gp_ids=p1_arch.gp_ids,
-            p2_gp_ids=p2_arch.gp_ids,
-        )
-        p1_agent = p1_arch.agent_cls(rng=rng)
-        p2_agent = p2_arch.agent_cls(rng=rng)
-        state, _ = engine.run_game(p1_agent, p2_agent)
-        assert state.phase == GamePhase.GAME_OVER
-
-        if state.winner == 1:
-            p1_wins += 1
-        elif state.winner == 2:
-            p2_wins += 1
-        else:
-            draws += 1
-
-    decisive = p1_wins + p2_wins
-    p1_rate = (p1_wins / decisive * 100) if decisive else 0.0
-    return {"p1_rate": p1_rate, "draws": draws}
-
-
 def run_identity(games: int, seed: int) -> dict[tuple[str, str], dict]:
     """Run the off-diagonal identity matrix for Aggro, Control, and Economy."""
-    rng = np.random.default_rng(seed)
-    results: dict[tuple[str, str], dict] = {}
-    names = list(ARCHETYPES.keys())
-    for p1 in names:
-        for p2 in names:
-            if p1 == p2:
-                continue
-            results[(p1, p2)] = run_matchup(ARCHETYPES[p1], ARCHETYPES[p2], games, rng)
-    return results
+    return run_archetype_matrix(ARCHETYPES, games, seed, include_mirrors=False)
 
 
 def identity_passes(results: dict[tuple[str, str], dict]) -> bool:
@@ -140,16 +88,7 @@ def print_results(results: dict[tuple[str, str], dict]) -> None:
     print("=" * 56)
     print("L2 IDENTITY 3")
     print("=" * 56)
-    for p1, p2 in (
-        ("AGGRO", "CONTROL"),
-        ("CONTROL", "AGGRO"),
-        ("AGGRO", "ECONOMY"),
-        ("ECONOMY", "AGGRO"),
-        ("CONTROL", "ECONOMY"),
-        ("ECONOMY", "CONTROL"),
-    ):
-        result = results[(p1, p2)]
-        print(f"{p1:>8} -> {p2:<8} {result['p1_rate']:5.1f}%   draws={result['draws']}")
+    print_directional_rows(results, prefix="",)
 
     print()
     if identity_passes(results):
@@ -161,8 +100,8 @@ def print_results(results: dict[tuple[str, str], dict]) -> None:
 def main() -> None:
     """CLI entrypoint for the L2 identity harness."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--games", type=int, default=500, help="games per directional matchup")
-    parser.add_argument("--seed", type=int, default=42, help="RNG seed")
+    add_games_arg(parser, default=500)
+    add_seed_arg(parser)
     args = parser.parse_args()
 
     print(f"Running L2 identity check: {args.games} games/matchup, seed={args.seed}")
