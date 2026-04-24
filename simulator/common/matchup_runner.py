@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import numpy as np
@@ -48,6 +49,14 @@ def run_directional_matchup(
     total_winner_hp = 0
     close_matches = 0
 
+    def _new_agent(agent_cls, rng: np.random.Generator):
+        """Instantiate one agent, passing custom GP data when supported."""
+        init_params = inspect.signature(agent_cls.__init__).parameters
+        kwargs: dict[str, Any] = {"rng": rng}
+        if god_powers is not None and "god_powers" in init_params:
+            kwargs["god_powers"] = god_powers
+        return agent_cls(**kwargs)
+
     for _ in range(games):
         engine = GameEngine(
             p1_die_types=p1_dice,
@@ -59,8 +68,8 @@ def run_directional_matchup(
             condition_id=condition_id,
             condition_ids=condition_ids,
         )
-        p1_agent = p1_arch.agent_cls(rng=rng)
-        p2_agent = p2_arch.agent_cls(rng=rng)
+        p1_agent = _new_agent(p1_arch.agent_cls, rng)
+        p2_agent = _new_agent(p2_arch.agent_cls, rng)
         state, _ = engine.run_game(p1_agent, p2_agent)
 
         assert state.phase == GamePhase.GAME_OVER

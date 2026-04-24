@@ -42,19 +42,32 @@ def choose_keep_by_scores(
     return frozenset(kept)
 
 
-def score_gp_choice(view: AgentView, god_powers: Mapping[str, GodPower], choice: tuple[str, int]) -> float:
+def score_gp_choice(
+    view: AgentView,
+    god_powers: Mapping[str, GodPower],
+    choice: tuple[str, int],
+    threat_tier_order: Iterable[int] = (0,),
+) -> float:
     """Score one GP/tier choice from visible tactical context."""
     gp_id, tier_idx = choice
     tier = god_powers[gp_id].tiers[tier_idx]
-    cost_penalty = tier.cost * 0.18
+    cost_penalty = tier.cost * 0.22
     missing_hp = view.missing_hp
     incoming_dice = view.combat.incoming_total
-    incoming_gp = estimate_opponent_gp_damage(view)
+    incoming_gp = estimate_opponent_gp_damage(
+        view,
+        tier_order=threat_tier_order,
+        god_powers=god_powers,
+    )
 
     score = -cost_penalty
+    score -= tier_idx * 0.35
 
     if tier.damage:
-        score += float(tier.damage) * 2.2
+        effective_damage = min(float(tier.damage), float(view.opponent.hp))
+        wasted_damage = max(0.0, float(tier.damage) - float(view.opponent.hp))
+        score += effective_damage * 2.3
+        score -= wasted_damage * 0.7
         if view.opponent.hp <= tier.damage:
             score += 8.0
 
@@ -64,23 +77,28 @@ def score_gp_choice(view: AgentView, god_powers: Mapping[str, GodPower], choice:
     if tier.block_amount:
         prevented = min(tier.block_amount, incoming_gp)
         score += prevented * 2.4
+        score -= max(0, tier.block_amount - prevented) * 0.5
         if incoming_gp >= view.player.hp:
             score += prevented * 2.0
 
     if tier.heal:
         healed = min(tier.heal, missing_hp)
         score += healed * 1.9
+        score -= max(0, tier.heal - healed) * 0.4
         if view.player.hp <= 5:
             score += healed * 1.2
 
     if tier.token_gain:
         score += max(0, tier.token_gain - tier.cost) * 1.6
         score += min(tier.token_gain, 4) * 0.25
+        if incoming_dice + incoming_gp >= view.player.hp:
+            score -= tier.cost * 0.25
 
     if tier.damage_reduction:
         prevented = min(tier.damage_reduction, incoming_dice)
         score += prevented * 2.5
         score += round(prevented * tier.reflect_pct) * 1.8
+        score -= max(0, tier.damage_reduction - prevented) * 0.35
         if incoming_dice >= view.player.hp:
             score += prevented * 2.0
 
@@ -96,6 +114,7 @@ def best_scored_gp(
     god_powers: Mapping[str, GodPower],
     gp_priority: Iterable[str],
     tier_order: Iterable[int] = (0,),
+    threat_tier_order: Iterable[int] = (0,),
     minimum_score: float = 0.5,
 ) -> tuple[str, int] | None:
     """Return the highest-scoring affordable GP from a priority-filtered set."""
@@ -104,12 +123,13 @@ def best_scored_gp(
     priority_set = tuple(gp_priority)
 
     for gp_id in priority_set:
-        choice = try_gp(player_with_available_tokens(view), god_powers, gp_id, tier_order)
-        if choice is None:
-            continue
-        score = score_gp_choice(view, god_powers, choice)
-        if score > best_score:
-            best_choice = choice
-            best_score = score
+        for tier_idx in tier_order:
+            choice = try_gp(player_with_available_tokens(view), god_powers, gp_id, (tier_idx,))
+            if choice is None:
+                continue
+            score = score_gp_choice(view, god_powers, choice, threat_tier_order=threat_tier_order)
+            if score > best_score:
+                best_choice = choice
+                best_score = score
 
     return best_choice

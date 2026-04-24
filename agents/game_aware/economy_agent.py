@@ -19,9 +19,9 @@ from game_mechanics.god_powers import load_god_powers
 class GameAwareEconomyAgent(Agent):
     """Economy agent that chooses between ramp, stabilization, and cash-out turns."""
 
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
+    def __init__(self, rng: np.random.Generator | None = None, god_powers=None) -> None:
         self.rng = rng or np.random.default_rng()
-        self._god_powers = load_god_powers()
+        self._god_powers = god_powers if god_powers is not None else load_god_powers()
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
         """Keep economy faces, but value defense when the opponent can race."""

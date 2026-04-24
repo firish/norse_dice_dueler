@@ -5,6 +5,9 @@ from __future__ import annotations
 from agents.game_aware.aggro_agent import GameAwareAggroAgent
 from agents.game_aware.control_agent import GameAwareControlAgent
 from agents.game_aware.economy_agent import GameAwareEconomyAgent
+from agents.game_aware_tier.aggro_agent import GameAwareTierAggroAgent
+from agents.game_aware_tier.control_agent import GameAwareTierControlAgent
+from agents.game_aware_tier.economy_agent import GameAwareTierEconomyAgent
 from agents.rule_based.aggro_agent import MatchupAwareAggroAgent
 from agents.rule_based.control_agent import MatchupAwareControlAgent
 from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
@@ -26,6 +29,12 @@ def agent_classes(agent_mode: str = "rule-based") -> dict[str, type]:
             "AGGRO": TierAwareAggroAgent,
             "CONTROL": TierAwareControlAgent,
             "ECONOMY": TierAwareEconomyAgent,
+        }
+    if agent_mode == "game-aware-tier":
+        return {
+            "AGGRO": GameAwareTierAggroAgent,
+            "CONTROL": GameAwareTierControlAgent,
+            "ECONOMY": GameAwareTierEconomyAgent,
         }
     if agent_mode == "game-aware":
         return {

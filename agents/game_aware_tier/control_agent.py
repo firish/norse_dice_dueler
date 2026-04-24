@@ -1,10 +1,11 @@
-"""Game-aware Control pilot."""
+"""Game+tier-aware Control pilot."""
 
 from __future__ import annotations
 
 import numpy as np
 
 from agents import Agent
+from agents.game_aware.control_agent import GameAwareControlAgent
 from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
 from agents.game_aware.state_features import (
     estimate_opponent_gp_damage,
@@ -13,20 +14,18 @@ from agents.game_aware.state_features import (
     view_for,
 )
 from game_mechanics.game_state import GameState
-from game_mechanics.god_powers import load_god_powers
 
 
-class GameAwareControlAgent(Agent):
-    """Control agent that times defense, healing, and Tyr based on visible threat."""
+class GameAwareTierControlAgent(GameAwareControlAgent):
+    """Control pilot that keeps game-aware reads while escalating Aegis/Eir/Tyr tiers."""
 
     def __init__(self, rng: np.random.Generator | None = None, god_powers=None) -> None:
-        self.rng = rng or np.random.default_rng()
-        self._god_powers = god_powers if god_powers is not None else load_god_powers()
+        super().__init__(rng=rng, god_powers=god_powers)
 
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
-        """Keep defense under pressure, otherwise keep enough offense/tokens to close."""
+        """Preserve game-aware keep logic but account for higher-tier threat."""
         view = view_for(state, player_num)
-        threat = estimate_total_threat(view)
+        threat = estimate_total_threat(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
         economy_opponent = opponent_has_role(view, "economy")
         scores = {
             "FACE_HELMET": 3.0,
@@ -39,17 +38,18 @@ class GameAwareControlAgent(Agent):
         return choose_keep_by_scores(view, scores, keep_threshold=1.5)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        """Use Aegis for real GP danger, Eir when healing matters, Tyr for pressure."""
+        """Escalate tiers only when threat or matchup context justifies it."""
         view = view_for(state, player_num)
-        incoming_gp = estimate_opponent_gp_damage(view)
+        incoming_gp = estimate_opponent_gp_damage(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
 
         if opponent_has_role(view, "economy") and incoming_gp > 0:
             choice = best_scored_gp(
                 view,
                 self._god_powers,
                 ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
-                tier_order=(0,),
-                minimum_score=0.5,
+                tier_order=(2, 1, 0),
+                threat_tier_order=(2, 1, 0),
+                minimum_score=0.2,
             )
             if choice is not None:
                 return choice
@@ -58,6 +58,7 @@ class GameAwareControlAgent(Agent):
             view,
             self._god_powers,
             ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-            tier_order=(0,),
-            minimum_score=0.5,
+            tier_order=(2, 1, 0),
+            threat_tier_order=(2, 1, 0),
+            minimum_score=0.2,
         )

@@ -34,6 +34,7 @@ class AggroAgent(Agent):
     def __init__(
         self,
         rng: np.random.Generator | None = None,
+        god_powers=None,
         keep_faces: frozenset[str] | None = None,
         gp_priority: tuple[str, ...] | None = None,
         tier_order: tuple[int, ...] | None = None,
@@ -41,7 +42,7 @@ class AggroAgent(Agent):
         gp_select_fn: Callable | None = None,
     ) -> None:
         self.rng = rng or np.random.default_rng()
-        self._god_powers = load_god_powers()
+        self._god_powers = god_powers if god_powers is not None else load_god_powers()
         self.keep_faces = keep_faces if keep_faces is not None else _DEFAULT_KEEP
         self.gp_priority = gp_priority if gp_priority is not None else _DEFAULT_GP_PRIORITY
         self.tier_order = tier_order if tier_order is not None else _DEFAULT_TIER_ORDER
@@ -103,8 +104,8 @@ class MatchupAwareAggroAgent(AggroAgent):
 class TierAwareAggroAgent(MatchupAwareAggroAgent):
     """Aggro pilot that is both matchup-aware and able to cash up into tiers."""
 
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
-        super().__init__(rng=rng, tier_order=(2, 1, 0))
+    def __init__(self, rng: np.random.Generator | None = None, god_powers=None) -> None:
+        super().__init__(rng=rng, god_powers=god_powers, tier_order=(2, 1, 0))
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Prefer lethal or near-lethal tier upgrades before defaulting to T1 pressure."""

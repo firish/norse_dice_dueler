@@ -11,10 +11,12 @@ from dataclasses import dataclass, replace
 
 from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameState, PlayerState
+from game_mechanics.god_powers import GodPower, load_god_powers
 
 ATTACK_FACES = frozenset({"FACE_AXE", "FACE_ARROW"})
 DEFENSE_FACES = frozenset({"FACE_HELMET", "FACE_SHIELD"})
 TOKEN_FACES = frozenset({"FACE_HAND", "FACE_HAND_BORDERED"})
+_DEFAULT_GOD_POWERS = load_god_powers()
 
 
 @dataclass(frozen=True)
@@ -133,24 +135,36 @@ def opponent_has_role(view: AgentView, role: str) -> bool:
     return False
 
 
-def estimate_opponent_gp_damage(view: AgentView) -> int:
+def estimate_opponent_gp_damage(
+    view: AgentView,
+    tier_order: tuple[int, ...] = (0,),
+    god_powers: dict[str, GodPower] | None = None,
+) -> int:
     """Estimate the largest immediate offensive GP damage the opponent can afford."""
     tokens = view.opponent.tokens + view.opponent.dice_faces.count("FACE_HAND_BORDERED")
+    god_powers = god_powers if god_powers is not None else _DEFAULT_GOD_POWERS
     best = 0
-    if "GP_SURTRS_FLAME" in view.opponent.gp_loadout and tokens >= 3:
-        best = max(best, 2)
-    if "GP_FENRIRS_BITE" in view.opponent.gp_loadout and tokens >= 7:
-        best = max(best, 4)
-    if "GP_TYRS_JUDGMENT" in view.opponent.gp_loadout and tokens >= 5:
-        best = max(best, 3)
-    if "GP_MJOLNIRS_WRATH" in view.opponent.gp_loadout and tokens >= 8:
-        best = max(best, 3)
+    for gp_id in ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT", "GP_MJOLNIRS_WRATH"):
+        if gp_id not in view.opponent.gp_loadout:
+            continue
+        gp = god_powers.get(gp_id)
+        if gp is None:
+            continue
+        for tier_idx in tier_order:
+            tier = gp.tiers[tier_idx]
+            if tokens >= tier.cost:
+                best = max(best, int(tier.damage))
+                break
     return best
 
 
-def estimate_total_threat(view: AgentView) -> int:
+def estimate_total_threat(
+    view: AgentView,
+    tier_order: tuple[int, ...] = (0,),
+    god_powers: dict[str, GodPower] | None = None,
+) -> int:
     """Estimate visible incoming damage from combat plus likely offensive GP pressure."""
-    return view.combat.incoming_total + estimate_opponent_gp_damage(view)
+    return view.combat.incoming_total + estimate_opponent_gp_damage(view, tier_order, god_powers)
 
 
 def player_with_available_tokens(view: AgentView) -> PlayerState:

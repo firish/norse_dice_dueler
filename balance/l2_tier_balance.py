@@ -245,9 +245,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_games_arg(parser, default=40)
     add_seed_arg(parser)
+    parser.add_argument(
+        "--agent-mode",
+        choices=("tier-aware", "game-aware-tier"),
+        default="game-aware-tier",
+        help="agent family to use during tier-profile search",
+    )
     parser.add_argument("--top", type=int, default=8, help="profiles to print in search mode")
     parser.add_argument("--validate", type=str, default="", help="validate one profile by name")
     args = parser.parse_args()
+
+    global ARCHETYPES
+    ARCHETYPES = build_archetypes(args.agent_mode)
 
     profiles = {profile.name: profile for profile in generate_profiles()}
     if args.validate:

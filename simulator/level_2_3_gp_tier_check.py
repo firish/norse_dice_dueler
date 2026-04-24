@@ -21,9 +21,13 @@ from simulator.common.matchup_runner import (
 )
 
 
-def run_matrix(games: int, seed: int = 42) -> dict[tuple[str, str], dict]:
+def run_matrix(
+    games: int,
+    seed: int = 42,
+    agent_mode: str = "game-aware-tier",
+) -> dict[tuple[str, str], dict]:
     """Run the full L2 matrix using the canonical shell and tier-aware pilots."""
-    archetypes = build_archetypes("tier-aware")
+    archetypes = build_archetypes(agent_mode)
     return run_archetype_matrix(archetypes, games, seed, include_mirrors=True)
 
 
@@ -82,10 +86,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_games_arg(parser, default=500, help_text="games per cell")
     add_seed_arg(parser)
+    parser.add_argument(
+        "--agent-mode",
+        choices=("tier-aware", "game-aware-tier"),
+        default="game-aware-tier",
+        help="agent family to use for tier benchmark runs",
+    )
     args = parser.parse_args()
 
-    print(f"Running L2 GP tier check: {args.games} games/cell, seed={args.seed}")
-    results = run_matrix(args.games, args.seed)
+    print(
+        f"Running L2 GP tier check: {args.games} games/cell, "
+        f"seed={args.seed}, agent_mode={args.agent_mode}"
+    )
+    results = run_matrix(args.games, args.seed, args.agent_mode)
     print_matrix(results)
 
 

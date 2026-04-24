@@ -39,6 +39,7 @@ class ControlAgent(Agent):
     def __init__(
         self,
         rng: np.random.Generator | None = None,
+        god_powers=None,
         keep_faces: frozenset[str] | None = None,
         gp_priority_healthy: tuple[str, ...] | None = None,
         gp_priority_hurt: tuple[str, ...] | None = None,
@@ -48,7 +49,7 @@ class ControlAgent(Agent):
         gp_select_fn: Callable | None = None,
     ) -> None:
         self.rng = rng or np.random.default_rng()
-        self._god_powers = load_god_powers()
+        self._god_powers = god_powers if god_powers is not None else load_god_powers()
         self.keep_faces = keep_faces if keep_faces is not None else _DEFAULT_KEEP
         self.gp_priority_healthy = gp_priority_healthy if gp_priority_healthy is not None else _DEFAULT_GP_HEALTHY
         self.gp_priority_hurt = gp_priority_hurt if gp_priority_hurt is not None else _DEFAULT_GP_HURT
@@ -119,8 +120,8 @@ class MatchupAwareControlAgent(ControlAgent):
 class TierAwareControlAgent(MatchupAwareControlAgent):
     """Tier-aware Control pilot for the T2/T3 escalation harness."""
 
-    def __init__(self, rng: np.random.Generator | None = None) -> None:
-        super().__init__(rng=rng, tier_order=(2, 1, 0))
+    def __init__(self, rng: np.random.Generator | None = None, god_powers=None) -> None:
+        super().__init__(rng=rng, god_powers=god_powers, tier_order=(2, 1, 0))
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Spend up on defensive tiers only when the incoming threat justifies it."""
