@@ -1,18 +1,59 @@
-"""L3 entrypoint for the core-dice pool sweep.
+"""L3 benchmark: approved core-dice constrained package.
 
 What this file does:
-  - Preserves the level-oriented `simulator.l3_core_dice_pool` command.
-  - Delegates the actual sweep implementation to `balance.l3_core_dice_pool`.
+  - Validates the fixed approved L3A core-dice package.
+  - Checks whether the constrained 3 Warrior + 3 family-dice rule preserves balance.
 
 What this file does not do:
-  - Hold the search logic itself.
-  - Define benchmark results directly.
-
-This level-oriented wrapper keeps the L3 harness discoverable under
-`simulator/` while delegating the actual search implementation to `balance/`.
+  - Search across the legal L3A package space.
+  - Tune values automatically.
 """
 
-from balance.l3_core_dice_pool import main
+from __future__ import annotations
+
+import argparse
+
+from archetypes.level_3_core import APPROVED_PACKAGE_NAME, ARCHETYPES, TARGETS
+from simulator.common.cli import add_games_arg, add_seed_arg
+from simulator.common.matchup_runner import (
+    matrix_error as compute_matrix_error,
+    run_matrix as run_archetype_matrix,
+)
+from simulator.common.reporting import print_directional_rows
+
+
+def run_matrix(games: int, seed: int) -> dict[tuple[str, str], dict]:
+    """Run the approved L3A off-diagonal matrix."""
+    return run_archetype_matrix(ARCHETYPES, games, seed, include_mirrors=False)
+
+
+def matrix_error(results: dict[tuple[str, str], dict]) -> float:
+    """Return absolute error from the target directional matrix."""
+    return compute_matrix_error(results, TARGETS)
+
+
+def print_results(results: dict[tuple[str, str], dict]) -> None:
+    """Print the approved L3A benchmark report."""
+    print("L3A CORE DICE")
+    print("Rule: 3 Warrior + approved 3-die core package")
+    print(f"Approved package: {APPROVED_PACKAGE_NAME}")
+    print("Core pool: Berserker / Warden / Miser")
+    print("  Aggro   = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
+    print("  Control = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
+    print("  Economy = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
+    print_directional_rows(results)
+    print(f"  Matrix error: {matrix_error(results):.1f}")
+
+
+def main() -> None:
+    """CLI entrypoint for the L3 core-dice benchmark."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_games_arg(parser, default=240)
+    add_seed_arg(parser)
+    args = parser.parse_args()
+
+    results = run_matrix(args.games, args.seed)
+    print_results(results)
 
 
 if __name__ == "__main__":

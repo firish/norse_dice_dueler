@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import argparse
 
-from archetypes.level_2 import ARCHETYPES, TARGETS, build_archetypes
+from archetypes.level_2 import GP_TIER_ARCHETYPES, TARGETS
 from simulator.common.cli import add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
@@ -24,11 +24,9 @@ from simulator.common.matchup_runner import (
 def run_matrix(
     games: int,
     seed: int = 42,
-    agent_mode: str = "game-aware-tier",
 ) -> dict[tuple[str, str], dict]:
     """Run the full L2 matrix using the canonical shell and tier-aware pilots."""
-    archetypes = build_archetypes(agent_mode)
-    return run_archetype_matrix(archetypes, games, seed, include_mirrors=True)
+    return run_archetype_matrix(GP_TIER_ARCHETYPES, games, seed, include_mirrors=True)
 
 
 def matrix_error(results: dict[tuple[str, str], dict]) -> float:
@@ -43,7 +41,7 @@ def _format_pct(x: float) -> str:
 
 def print_matrix(results: dict[tuple[str, str], dict]) -> None:
     """Print the human-readable L2 tier-check report."""
-    names = list(ARCHETYPES.keys())
+    names = list(GP_TIER_ARCHETYPES.keys())
 
     print()
     print("=" * 60)
@@ -86,19 +84,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_games_arg(parser, default=500, help_text="games per cell")
     add_seed_arg(parser)
-    parser.add_argument(
-        "--agent-mode",
-        choices=("tier-aware", "game-aware-tier"),
-        default="game-aware-tier",
-        help="agent family to use for tier benchmark runs",
-    )
     args = parser.parse_args()
 
-    print(
-        f"Running L2 GP tier check: {args.games} games/cell, "
-        f"seed={args.seed}, agent_mode={args.agent_mode}"
-    )
-    results = run_matrix(args.games, args.seed, args.agent_mode)
+    print(f"Running L2 GP tier check: {args.games} games/cell, seed={args.seed}")
+    results = run_matrix(args.games, args.seed)
     print_matrix(results)
 
 

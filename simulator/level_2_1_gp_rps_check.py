@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import argparse
 
-from archetypes.level_2 import ARCHETYPES
+from archetypes.level_2 import GP_RPS_ARCHETYPES
 from simulator.common.cli import add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 from simulator.common.reporting import print_directional_rows
@@ -36,7 +36,7 @@ from simulator.common.reporting import print_directional_rows
 
 def run_identity(games: int, seed: int) -> dict[tuple[str, str], dict]:
     """Run the off-diagonal identity matrix for Aggro, Control, and Economy."""
-    return run_archetype_matrix(ARCHETYPES, games, seed, include_mirrors=False)
+    return run_archetype_matrix(GP_RPS_ARCHETYPES, games, seed, include_mirrors=False)
 
 
 def identity_passes(results: dict[tuple[str, str], dict]) -> bool:

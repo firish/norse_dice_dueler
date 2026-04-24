@@ -10,43 +10,31 @@ What this file does not do:
 
 Rule:
   - Every loadout starts with 3x DIE_WARRIOR.
-  - The remaining 3 dice come from one archetype family:
-      Aggro   -> DIE_BERSERKER / DIE_GAMBLER
-      Control -> DIE_WARDEN / DIE_SKALD
-      Economy -> DIE_MISER / DIE_HUNTER
+  - The remaining 3 dice may be any mix of core dice:
+      DIE_BERSERKER / DIE_WARDEN / DIE_MISER
 
-This keeps deckbuilding expressive while preserving archetype identity.
+This keeps deckbuilding expressive while preserving the bounded L3 core grammar.
 
 Run:
     python -m balance.l3_core_dice_pool
     python -m balance.l3_core_dice_pool --games 120 --top 8
-    python -m balance.l3_core_dice_pool --validate A_CORE31,C_CORE21,E_CORE21
+    python -m balance.l3_core_dice_pool --validate A_CORE_B111,C_CORE_B111,E_CORE_B111
 """
 
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-from itertools import product
+from itertools import combinations_with_replacement, product
 
-from agents.rule_based.aggro_agent import AggroAgent
-from agents.rule_based.control_agent import MatchupAwareControlAgent
-from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
+from archetypes.common import agent_classes
+from archetypes.level_3_core import TARGETS
 from simulator.common.cli import add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
     run_matrix as run_archetype_matrix,
 )
 from simulator.common.reporting import print_directional_rows
-
-TARGETS: dict[tuple[str, str], float] = {
-    ("AGGRO", "CONTROL"): 40.0,
-    ("CONTROL", "AGGRO"): 60.0,
-    ("AGGRO", "ECONOMY"): 60.0,
-    ("ECONOMY", "AGGRO"): 40.0,
-    ("CONTROL", "ECONOMY"): 40.0,
-    ("ECONOMY", "CONTROL"): 60.0,
-}
 
 
 @dataclass(frozen=True)
@@ -63,16 +51,12 @@ class ArchetypeLoadout:
 def _make_loadout(
     name: str,
     archetype: str,
-    core_die: str,
-    support_die: str,
+    extra_dice: tuple[str, str, str],
     gp_ids: tuple[str, ...],
     agent_cls: type,
-    core_count: int,
-    support_count: int,
 ) -> ArchetypeLoadout:
-    """Build one constrained loadout from a core/support split."""
-    assert core_count + support_count == 3
-    dice_ids = ("DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR") + (core_die,) * core_count + (support_die,) * support_count
+    """Build one constrained loadout from the 3 Warrior + any 3 core grammar."""
+    dice_ids = ("DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR") + extra_dice
     return ArchetypeLoadout(
         name=name,
         archetype=archetype,
@@ -82,59 +66,53 @@ def _make_loadout(
     )
 
 
-AGGRO_CANDIDATES: dict[str, ArchetypeLoadout] = {
-    "A_CORE30": _make_loadout(
-        "A_CORE30", "AGGRO", "DIE_BERSERKER", "DIE_GAMBLER",
-        ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        AggroAgent, 3, 0,
-    ),
-    "A_CORE21": _make_loadout(
-        "A_CORE21", "AGGRO", "DIE_BERSERKER", "DIE_GAMBLER",
-        ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        AggroAgent, 2, 1,
-    ),
-    "A_CORE12": _make_loadout(
-        "A_CORE12", "AGGRO", "DIE_BERSERKER", "DIE_GAMBLER",
-        ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        AggroAgent, 1, 2,
-    ),
-}
+CORE_DICE = ("DIE_BERSERKER", "DIE_WARDEN", "DIE_MISER")
 
-CONTROL_CANDIDATES: dict[str, ArchetypeLoadout] = {
-    "C_CORE30": _make_loadout(
-        "C_CORE30", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
-        ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        MatchupAwareControlAgent, 3, 0,
-    ),
-    "C_CORE21": _make_loadout(
-        "C_CORE21", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
-        ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        MatchupAwareControlAgent, 2, 1,
-    ),
-    "C_CORE12": _make_loadout(
-        "C_CORE12", "CONTROL", "DIE_WARDEN", "DIE_SKALD",
-        ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        MatchupAwareControlAgent, 1, 2,
-    ),
-}
 
-ECONOMY_CANDIDATES: dict[str, ArchetypeLoadout] = {
-    "E_CORE30": _make_loadout(
-        "E_CORE30", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
-        ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        MatchupAwareEconomyAgent, 3, 0,
-    ),
-    "E_CORE21": _make_loadout(
-        "E_CORE21", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
-        ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        MatchupAwareEconomyAgent, 2, 1,
-    ),
-    "E_CORE12": _make_loadout(
-        "E_CORE12", "ECONOMY", "DIE_MISER", "DIE_HUNTER",
-        ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        MatchupAwareEconomyAgent, 1, 2,
-    ),
-}
+def _candidate_name(prefix: str, extra_dice: tuple[str, str, str]) -> str:
+    """Encode one legal core-dice multiset as a compact stable name."""
+    berserker_count = extra_dice.count("DIE_BERSERKER")
+    warden_count = extra_dice.count("DIE_WARDEN")
+    miser_count = extra_dice.count("DIE_MISER")
+    return f"{prefix}_CORE_B{berserker_count}{warden_count}{miser_count}"
+
+
+def _build_candidates(
+    prefix: str,
+    archetype: str,
+    gp_ids: tuple[str, ...],
+    agent_cls: type,
+) -> dict[str, ArchetypeLoadout]:
+    """Build every legal loadout for one archetype under the shared core grammar."""
+    candidates: dict[str, ArchetypeLoadout] = {}
+    for extra_dice in combinations_with_replacement(CORE_DICE, 3):
+        name = _candidate_name(prefix, extra_dice)
+        candidates[name] = _make_loadout(name, archetype, extra_dice, gp_ids, agent_cls)
+    return candidates
+
+
+RULE_BASED_CLASSES = agent_classes("rule-based")
+
+AGGRO_CANDIDATES = _build_candidates(
+    "A",
+    "AGGRO",
+    ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
+    RULE_BASED_CLASSES["AGGRO"],
+)
+
+CONTROL_CANDIDATES = _build_candidates(
+    "C",
+    "CONTROL",
+    ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
+    RULE_BASED_CLASSES["CONTROL"],
+)
+
+ECONOMY_CANDIDATES = _build_candidates(
+    "E",
+    "ECONOMY",
+    ("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
+    RULE_BASED_CLASSES["ECONOMY"],
+)
 def run_package(
     aggro: ArchetypeLoadout,
     control: ArchetypeLoadout,
