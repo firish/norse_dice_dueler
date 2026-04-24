@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameState, PlayerState
 
 ATTACK_FACES = frozenset({"FACE_AXE", "FACE_ARROW"})
@@ -52,8 +53,12 @@ class AgentView:
     def banked_tokens(self) -> int:
         """Bordered-hand tokens available at GP timing under current rules."""
         extra = self.player.dice_faces.count("FACE_HAND_BORDERED")
-        if self.has_condition("COND_FREYA_BLESSING") and self.state.round_num >= 6:
-            extra += 1 if self.player.dice_faces.count("FACE_HAND_BORDERED") >= 2 else 0
+        freya_start_round = int(condition_param("COND_FREYA_BLESSING", "start_round", 6))
+        freya_threshold = int(condition_param("COND_FREYA_BLESSING", "bordered_threshold", 2))
+        freya_bonus_tokens = int(condition_param("COND_FREYA_BLESSING", "bonus_tokens", 1))
+        if self.has_condition("COND_FREYA_BLESSING") and self.state.round_num >= freya_start_round:
+            if self.player.dice_faces.count("FACE_HAND_BORDERED") >= freya_threshold:
+                extra += freya_bonus_tokens
         return extra
 
     @property
@@ -66,7 +71,8 @@ class AgentView:
         """Approximate missing HP using the current player/opponent max as context."""
         max_seen_hp = max(15, self.player.hp, self.opponent.hp)
         if self.has_condition("COND_YGGDRASIL_ROOTS"):
-            max_seen_hp = max(max_seen_hp, 17)
+            bonus_hp = int(condition_param("COND_YGGDRASIL_ROOTS", "bonus_hp", 2))
+            max_seen_hp = max(max_seen_hp, 15 + bonus_hp)
         return max(0, max_seen_hp - self.player.hp)
 
     def has_condition(self, condition_id: str) -> bool:

@@ -3,6 +3,9 @@
     "id": "COND_ODIN_GAZE",
     "display_name": "Óðinn's Gaze",
     "effect": "During the first 2 rounds, the final reroll is skipped.",
+    "params": {
+      "active_rounds": 2
+    },
     "archetype_skew": "Favors Aggro (take what you roll). Hurts Control (relies on rerolls).",
     "rarity": "Common"
   },
@@ -10,6 +13,9 @@
     "id": "COND_MIDGARD_HEARTH",
     "display_name": "Midgard's Hearth",
     "effect": "Healing effects restore +1 additional HP.",
+    "params": {
+      "heal_bonus": 1
+    },
     "archetype_skew": "Favors Control. Neutral for Economy. Hurts Aggro.",
     "rarity": "Common"
   },
@@ -17,6 +23,11 @@
     "id": "COND_FENRIR_HUNT",
     "display_name": "Fenrir's Hunt",
     "effect": "From round 5 onwards, if you attacked with 3+ combat faces and all combat dice damage was blocked, deal +1 damage.",
+    "params": {
+      "start_round": 5,
+      "min_combat_faces": 3,
+      "bonus_damage": 1
+    },
     "archetype_skew": "Favors Aggro with focused dice. Neutral for others.",
     "rarity": "Common"
   },
@@ -24,6 +35,9 @@
     "id": "COND_YGGDRASIL_ROOTS",
     "display_name": "Yggdrasil's Roots",
     "effect": "Both players start with +2 HP (17 total).",
+    "params": {
+      "bonus_hp": 2
+    },
     "archetype_skew": "Favors Control and Combo (longer matches). Hurts Aggro.",
     "rarity": "Common"
   },
@@ -31,6 +45,10 @@
     "id": "COND_RAGNAROK",
     "display_name": "Ragnarök's Shadow",
     "effect": "From round 6 onwards, both players lose 1 HP at end of each round.",
+    "params": {
+      "start_round": 6,
+      "hp_loss": 1
+    },
     "archetype_skew": "Favors Aggro and Combo (ticking clock). Hurts Control (turtle).",
     "rarity": "Uncommon"
   },
@@ -38,6 +56,11 @@
     "id": "COND_FREYA_BLESSING",
     "display_name": "Freyja's Blessing",
     "effect": "From round 6 onwards, if you rolled 2 or more Gilded Hands, bank +1 extra token.",
+    "params": {
+      "start_round": 6,
+      "bordered_threshold": 2,
+      "bonus_tokens": 1
+    },
     "archetype_skew": "Favors Economy and Combo. Hurts strategies that ignore Hand dice.",
     "rarity": "Common"
   },
@@ -45,6 +68,9 @@
     "id": "COND_TYR_ARENA",
     "display_name": "Tyr's Arena",
     "effect": "God Powers cannot be activated during round 1.",
+    "params": {
+      "blocked_rounds": 1
+    },
     "archetype_skew": "Favors Aggro (dice-focused). Hurts Combo (God Power dependent).",
     "rarity": "Rare (5% appearance)"
   },
@@ -52,6 +78,10 @@
     "id": "COND_LOKI_MISCHIEF",
     "display_name": "Loki's Mischief",
     "effect": "During the first 3 rounds, one random die per player is locked and cannot be rerolled.",
+    "params": {
+      "active_rounds": 3,
+      "locked_dice": 1
+    },
     "archetype_skew": "Favors flexible builds. Hurts Combo (rigid synergies).",
     "rarity": "Uncommon"
   },
@@ -59,6 +89,10 @@
     "id": "COND_NIFLHEIM_CHILL",
     "display_name": "Niflheim's Chill",
     "effect": "If your defensive dice block 4 or more attacks this round, gain 1 token.",
+    "params": {
+      "block_threshold": 4,
+      "bonus_tokens": 1
+    },
     "archetype_skew": "Favors Control. Neutral for Economy. Hurts pure Aggro.",
     "rarity": "Uncommon"
   },
@@ -66,6 +100,10 @@
     "id": "COND_JOTUN_MIGHT",
     "display_name": "Jötunheim's Might",
     "effect": "God Powers costing 8 or more cost 1 fewer token.",
+    "params": {
+      "min_base_cost": 8,
+      "cost_discount": 1
+    },
     "archetype_skew": "Favors Combo and offensive builds. Accelerates all matches.",
     "rarity": "Uncommon"
   }

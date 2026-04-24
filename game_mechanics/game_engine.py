@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameEvent, GamePhase, GameState, PlayerState
 from game_mechanics.die_types import DieType
 from game_mechanics.god_powers import GodPower, load_god_powers
@@ -117,7 +118,9 @@ class GameEngine:
         else:
             self._god_powers: dict = {}
 
-        self._starting_hp = STARTING_HP + 2 if self._has_condition("COND_YGGDRASIL_ROOTS") else STARTING_HP
+        self._starting_hp = STARTING_HP
+        if self._has_condition("COND_YGGDRASIL_ROOTS"):
+            self._starting_hp += int(condition_param("COND_YGGDRASIL_ROOTS", "bonus_hp", 2))
 
     def _has_condition(self, condition_id: str) -> bool:
         """Return whether the current game has an active condition id."""
@@ -125,8 +128,11 @@ class GameEngine:
 
     def _gp_cost(self, base_cost: int, round_num: int) -> int:
         """Return the effective GP cost after condition-based modifiers."""
-        if self._has_condition("COND_JOTUN_MIGHT") and base_cost >= 8:
-            return max(1, base_cost - 1)
+        if self._has_condition("COND_JOTUN_MIGHT"):
+            min_base_cost = int(condition_param("COND_JOTUN_MIGHT", "min_base_cost", 8))
+            cost_discount = int(condition_param("COND_JOTUN_MIGHT", "cost_discount", 1))
+            if base_cost >= min_base_cost:
+                return max(1, base_cost - cost_discount)
         return base_cost
 
     def _choice_cost(self, choice: tuple[str, int] | None, round_num: int) -> int:
@@ -268,7 +274,8 @@ class GameEngine:
         p1_kept = _ALL_FREE
         p2_kept = _ALL_FREE
 
-        if self._has_condition("COND_LOKI_MISCHIEF") and state.round_num <= 3:
+        loki_active_rounds = int(condition_param("COND_LOKI_MISCHIEF", "active_rounds", 3))
+        if self._has_condition("COND_LOKI_MISCHIEF") and state.round_num <= loki_active_rounds:
             p1_lock = int(self.rng.integers(0, NUM_DICE))
             p2_lock = int(self.rng.integers(0, NUM_DICE))
             p1_kept = tuple(i == p1_lock for i in range(NUM_DICE))
@@ -310,7 +317,12 @@ class GameEngine:
         p2_tokens = state.p2.tokens
         events: list[GameEvent] = []
 
-        if self._has_condition("COND_ODIN_GAZE") and next_phase == GamePhase.GOD_POWER and state.round_num <= 2:
+        odin_active_rounds = int(condition_param("COND_ODIN_GAZE", "active_rounds", 2))
+        if (
+            self._has_condition("COND_ODIN_GAZE")
+            and next_phase == GamePhase.GOD_POWER
+            and state.round_num <= odin_active_rounds
+        ):
             p1_kept = (True,) * NUM_DICE
             p2_kept = (True,) * NUM_DICE
 
@@ -340,9 +352,12 @@ class GameEngine:
         p1_banked = p1_bordered
         p2_banked = p2_bordered
         if self._has_condition("COND_FREYA_BLESSING"):
-            if state.round_num >= 6:
-                p1_banked += 1 if p1_bordered >= 2 else 0
-                p2_banked += 1 if p2_bordered >= 2 else 0
+            freya_start_round = int(condition_param("COND_FREYA_BLESSING", "start_round", 6))
+            freya_threshold = int(condition_param("COND_FREYA_BLESSING", "bordered_threshold", 2))
+            freya_bonus_tokens = int(condition_param("COND_FREYA_BLESSING", "bonus_tokens", 1))
+            if state.round_num >= freya_start_round:
+                p1_banked += freya_bonus_tokens if p1_bordered >= freya_threshold else 0
+                p2_banked += freya_bonus_tokens if p2_bordered >= freya_threshold else 0
         p1 = replace(state.p1, tokens=state.p1.tokens + p1_banked)
         p2 = replace(state.p2, tokens=state.p2.tokens + p2_banked)
         events: list[GameEvent] = []
@@ -362,7 +377,8 @@ class GameEngine:
         ) -> PlayerState:
             if action is None:
                 return player
-            if self._has_condition("COND_TYR_ARENA") and state.round_num == 1:
+            tyr_blocked_rounds = int(condition_param("COND_TYR_ARENA", "blocked_rounds", 1))
+            if self._has_condition("COND_TYR_ARENA") and state.round_num <= tyr_blocked_rounds:
                 return player
             gp_id, tier_idx = action
             if gp_id not in player.gp_loadout:
@@ -417,11 +433,14 @@ class GameEngine:
         dmg_to_p2 = (p1_axes + p1_arrows) - p2_blocks + p1_thorns
         dmg_to_p1 = (p2_axes + p2_arrows) - p1_blocks + p2_thorns
 
-        if self._has_condition("COND_FENRIR_HUNT") and state.round_num >= 5:
-            if (p1_axes + p1_arrows) >= 3 and (p1_axes + p1_arrows) - p2_blocks == 0:
-                dmg_to_p2 += 1
-            if (p2_axes + p2_arrows) >= 3 and (p2_axes + p2_arrows) - p1_blocks == 0:
-                dmg_to_p1 += 1
+        fenrir_start_round = int(condition_param("COND_FENRIR_HUNT", "start_round", 5))
+        fenrir_min_combat_faces = int(condition_param("COND_FENRIR_HUNT", "min_combat_faces", 3))
+        fenrir_bonus_damage = int(condition_param("COND_FENRIR_HUNT", "bonus_damage", 1))
+        if self._has_condition("COND_FENRIR_HUNT") and state.round_num >= fenrir_start_round:
+            if (p1_axes + p1_arrows) >= fenrir_min_combat_faces and (p1_axes + p1_arrows) - p2_blocks == 0:
+                dmg_to_p2 += fenrir_bonus_damage
+            if (p2_axes + p2_arrows) >= fenrir_min_combat_faces and (p2_axes + p2_arrows) - p1_blocks == 0:
+                dmg_to_p1 += fenrir_bonus_damage
 
         p1_bragi_reflect = 0
         p2_bragi_reflect = 0
@@ -442,8 +461,10 @@ class GameEngine:
         p1_tokens = p1.tokens
         p2_tokens = p2.tokens
         if self._has_condition("COND_NIFLHEIM_CHILL"):
-            p1_tokens += 1 if p1_blocks >= 4 else 0
-            p2_tokens += 1 if p2_blocks >= 4 else 0
+            niflheim_block_threshold = int(condition_param("COND_NIFLHEIM_CHILL", "block_threshold", 4))
+            niflheim_bonus_tokens = int(condition_param("COND_NIFLHEIM_CHILL", "bonus_tokens", 1))
+            p1_tokens += niflheim_bonus_tokens if p1_blocks >= niflheim_block_threshold else 0
+            p2_tokens += niflheim_bonus_tokens if p2_blocks >= niflheim_block_threshold else 0
 
         new_state = replace(
             state,
@@ -549,8 +570,9 @@ class GameEngine:
         p1_heal = p1_tier.heal if (not p1_cancelled and p1_tier is not None) else 0
         p2_heal = p2_tier.heal if (not p2_cancelled and p2_tier is not None) else 0
         if self._has_condition("COND_MIDGARD_HEARTH"):
-            p1_heal += 1 if p1_heal > 0 else 0
-            p2_heal += 1 if p2_heal > 0 else 0
+            midgard_heal_bonus = int(condition_param("COND_MIDGARD_HEARTH", "heal_bonus", 1))
+            p1_heal += midgard_heal_bonus if p1_heal > 0 else 0
+            p2_heal += midgard_heal_bonus if p2_heal > 0 else 0
 
         # --- 5. Token gain ---
         if not p1_cancelled and p1_tier is not None:
@@ -618,9 +640,11 @@ class GameEngine:
         p2 = state.p2
         events: list[GameEvent] = []
 
-        if self._has_condition("COND_RAGNAROK") and state.round_num >= 6:
-            p1 = replace(p1, hp=max(0, p1.hp - 1))
-            p2 = replace(p2, hp=max(0, p2.hp - 1))
+        ragnarok_start_round = int(condition_param("COND_RAGNAROK", "start_round", 6))
+        ragnarok_hp_loss = int(condition_param("COND_RAGNAROK", "hp_loss", 1))
+        if self._has_condition("COND_RAGNAROK") and state.round_num >= ragnarok_start_round:
+            p1 = replace(p1, hp=max(0, p1.hp - ragnarok_hp_loss))
+            p2 = replace(p2, hp=max(0, p2.hp - ragnarok_hp_loss))
             events.append(GameEvent("condition_tick", {
                 "condition_id": self.condition_id,
                 "round": state.round_num,
