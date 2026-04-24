@@ -30,78 +30,13 @@ from __future__ import annotations
 
 import argparse
 
-from agents.rule_based.aggro_agent import AggroAgent
-from agents.rule_based.control_agent import MatchupAwareControlAgent
-from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
-from agents.game_aware.aggro_agent import GameAwareAggroAgent
-from agents.game_aware.control_agent import GameAwareControlAgent
-from agents.game_aware.economy_agent import GameAwareEconomyAgent
+from archetypes.level_3_advanced import ARCHETYPES, TARGETS, build_archetypes
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
-from simulator.common.harness_types import Archetype
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
     run_matrix as run_archetype_matrix,
 )
 from simulator.common.reporting import print_directional_rows
-
-TARGETS: dict[tuple[str, str], float] = {
-    ("AGGRO", "CONTROL"): 40.0,
-    ("CONTROL", "AGGRO"): 60.0,
-    ("AGGRO", "ECONOMY"): 60.0,
-    ("ECONOMY", "AGGRO"): 40.0,
-    ("CONTROL", "ECONOMY"): 40.0,
-    ("ECONOMY", "CONTROL"): 60.0,
-}
-
-def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
-    """Build the approved L3B archetype set using the requested agent family."""
-    if agent_mode == "rule-based":
-        agent_classes = {
-            "AGGRO": AggroAgent,
-            "CONTROL": MatchupAwareControlAgent,
-            "ECONOMY": MatchupAwareEconomyAgent,
-        }
-    elif agent_mode == "game-aware":
-        agent_classes = {
-            "AGGRO": GameAwareAggroAgent,
-            "CONTROL": GameAwareControlAgent,
-            "ECONOMY": GameAwareEconomyAgent,
-        }
-    else:
-        raise ValueError(f"Unknown agent mode: {agent_mode}")
-
-    return {
-        "AGGRO": Archetype(
-            name="AGGRO",
-            dice_ids=(
-                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-                "DIE_BERSERKER", "DIE_BERSERKER", "DIE_GAMBLER",
-            ),
-            gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-            agent_cls=agent_classes["AGGRO"],
-        ),
-        "CONTROL": Archetype(
-            name="CONTROL",
-            dice_ids=(
-                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-                "DIE_WARDEN", "DIE_WARDEN", "DIE_SKALD",
-            ),
-            gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-            agent_cls=agent_classes["CONTROL"],
-        ),
-        "ECONOMY": Archetype(
-            name="ECONOMY",
-            dice_ids=(
-                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-                "DIE_MISER", "DIE_MISER", "DIE_HUNTER",
-            ),
-            gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-            agent_cls=agent_classes["ECONOMY"],
-        ),
-    }
-
-
-ARCHETYPES: dict[str, Archetype] = build_archetypes()
 
 
 def run_matrix(games: int, seed: int, agent_mode: str = "rule-based") -> dict[tuple[str, str], dict]:

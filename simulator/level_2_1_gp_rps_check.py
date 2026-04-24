@@ -1,8 +1,8 @@
-"""L2 benchmark: identity check for the tuned three-archetype branch.
+"""L2 benchmark: identity check for the tuned three-archetype.
 
 What this file does:
   - Verifies that the intended Aggro / Control / Economy direction exists.
-  - Acts as a lighter-weight L2 sanity check before full balance validation.
+  - Acts as a lighter-weight L2 sanity check before full gp-balance validation.
 
 What this file does not do:
   - Prove final matchup magnitudes are correct.
@@ -28,44 +28,10 @@ from __future__ import annotations
 
 import argparse
 
-from agents.rule_based.aggro_agent import AggroAgent
-from agents.rule_based.control_agent import MatchupAwareControlAgent
-from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
+from archetypes.level_2 import ARCHETYPES
 from simulator.common.cli import add_games_arg, add_seed_arg
-from simulator.common.harness_types import Archetype
 from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 from simulator.common.reporting import print_directional_rows
-
-
-ARCHETYPES: dict[str, Archetype] = {
-    "AGGRO": Archetype(
-        name="AGGRO",
-        dice_ids=(
-            "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        agent_cls=AggroAgent,
-    ),
-    "CONTROL": Archetype(
-        name="CONTROL",
-        dice_ids=(
-            "DIE_WARDEN", "DIE_WARDEN", "DIE_WARDEN",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=MatchupAwareControlAgent,
-    ),
-    "ECONOMY": Archetype(
-        name="ECONOMY",
-        dice_ids=(
-            "DIE_MISER", "DIE_MISER", "DIE_MISER",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=MatchupAwareEconomyAgent,
-    ),
-}
 
 
 def run_identity(games: int, seed: int) -> dict[tuple[str, str], dict]:

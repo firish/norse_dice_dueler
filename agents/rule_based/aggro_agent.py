@@ -3,6 +3,7 @@
 The module currently exposes:
 
 - `AggroAgent` for the baseline T1 shell
+- `MatchupAwareAggroAgent` for tuned anti-Economy pressure timing
 - `TierAwareAggroAgent` for the T2/T3 escalation harness
 """
 
@@ -64,8 +65,43 @@ class AggroAgent(Agent):
         return first_affordable_gp(player, self._god_powers, self.gp_priority, self.tier_order)
 
 
-class TierAwareAggroAgent(AggroAgent):
-    """Aggro pilot that can cash up into T2/T3 finishers when it matters."""
+class MatchupAwareAggroAgent(AggroAgent):
+    """Aggro pilot that pressures Economy harder without changing core identity."""
+
+    def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
+        """Keep plain hands into Economy to tax their token race a bit more."""
+        player = state.p1 if player_num == 1 else state.p2
+        opponent = state.p2 if player_num == 1 else state.p1
+        if "GP_MJOLNIRS_WRATH" in opponent.gp_loadout:
+            keep_faces = frozenset({
+                "FACE_AXE",
+                "FACE_ARROW",
+                "FACE_HAND_BORDERED",
+                "FACE_HAND",
+            })
+        else:
+            keep_faces = self.keep_faces
+        return choose_keep_by_faces(player, keep_faces)
+
+    def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
+        """Burst into Fenrir earlier against Economy; otherwise keep Surtr cadence."""
+        player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
+        opponent = state.p2 if player_num == 1 else state.p1
+
+        if "GP_MJOLNIRS_WRATH" in opponent.gp_loadout:
+            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", self.tier_order)
+            if choice is not None:
+                return choice
+            choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", self.tier_order)
+            if choice is not None:
+                return choice
+            return try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", self.tier_order)
+
+        return super().choose_god_power(state, player_num)
+
+
+class TierAwareAggroAgent(MatchupAwareAggroAgent):
+    """Aggro pilot that is both matchup-aware and able to cash up into tiers."""
 
     def __init__(self, rng: np.random.Generator | None = None) -> None:
         super().__init__(rng=rng, tier_order=(2, 1, 0))
@@ -74,6 +110,15 @@ class TierAwareAggroAgent(AggroAgent):
         """Prefer lethal or near-lethal tier upgrades before defaulting to T1 pressure."""
         player = with_banked_tokens(state.p1 if player_num == 1 else state.p2)
         opponent = state.p2 if player_num == 1 else state.p1
+
+        if "GP_MJOLNIRS_WRATH" in opponent.gp_loadout:
+            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (2, 1, 0))
+            if choice is not None:
+                return choice
+            choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (1, 0, 2))
+            if choice is not None:
+                return choice
+            return try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (1, 0, 2))
 
         if player.tokens >= 13 and opponent.hp <= 7:
             choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (2,))

@@ -116,9 +116,9 @@ class TraceLine:
 def _load_layer_archetypes(layer: str) -> dict[str, tuple[AgentSide, AgentSide]]:
     """Return archetype pairs for a supported benchmark layer."""
     if layer == "l2":
-        from simulator.l2_balance_matrix import build_archetypes
+        from archetypes.level_2 import build_archetypes
     elif layer == "l3":
-        from simulator.l3_advanced_dice_pool import build_archetypes
+        from archetypes.level_3_advanced import build_archetypes
     else:
         raise ValueError(f"Unknown layer: {layer}")
 

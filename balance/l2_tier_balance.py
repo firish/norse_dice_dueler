@@ -28,26 +28,14 @@ import argparse
 from dataclasses import dataclass, replace
 from itertools import product
 
-from agents.rule_based.aggro_agent import TierAwareAggroAgent
-from agents.rule_based.control_agent import TierAwareControlAgent
-from agents.rule_based.economy_agent import TierAwareEconomyAgent
+from archetypes.level_2 import TARGETS, build_archetypes
 from game_mechanics.god_powers import GodPower, load_god_powers
 from simulator.common.cli import add_games_arg, add_seed_arg
-from simulator.common.harness_types import Archetype
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
     run_matrix as run_archetype_matrix,
 )
 from simulator.common.reporting import print_directional_rows
-
-TARGETS: dict[tuple[str, str], float] = {
-    ("AGGRO", "CONTROL"): 40.0,
-    ("CONTROL", "AGGRO"): 60.0,
-    ("AGGRO", "ECONOMY"): 60.0,
-    ("ECONOMY", "AGGRO"): 40.0,
-    ("CONTROL", "ECONOMY"): 40.0,
-    ("ECONOMY", "CONTROL"): 60.0,
-}
 
 @dataclass(frozen=True)
 class TierProfile:
@@ -68,36 +56,7 @@ class TierProfile:
     bragi_t3_reduce: int
     bragi_t3_reflect: float
 
-
-ARCHETYPES: dict[str, Archetype] = {
-    "AGGRO": Archetype(
-        name="AGGRO",
-        dice_ids=(
-            "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
-            "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-        agent_cls=TierAwareAggroAgent,
-    ),
-    "CONTROL": Archetype(
-        name="CONTROL",
-        dice_ids=(
-            "DIE_WARDEN", "DIE_WARDEN", "DIE_WARDEN",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-        agent_cls=TierAwareControlAgent,
-    ),
-    "ECONOMY": Archetype(
-        name="ECONOMY",
-        dice_ids=(
-            "DIE_MISER", "DIE_MISER", "DIE_MISER",
-            "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        ),
-        gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-        agent_cls=TierAwareEconomyAgent,
-    ),
-}
+ARCHETYPES = build_archetypes("tier-aware")
 
 
 def build_god_powers(profile: TierProfile) -> dict[str, GodPower]:

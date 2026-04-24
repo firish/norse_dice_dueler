@@ -1,4 +1,4 @@
-"""L2 benchmark: balance matrix for the tuned three-archetype shell.
+"""L2 benchmark: balance matrix (RPS branch magnitude) for the tuned three-archetype shell.
 
 What this file does:
   - Runs the fixed L2 Aggro / Control / Economy 3x3 matrix.
@@ -10,11 +10,13 @@ What this file does not do:
 
 Goal: validate a clean 3x3 rock-paper-scissors matchup matrix using only
   - 4 dice (Warrior, Berserker, Warden, Miser)
-  - 9 God Powers (T1 tier only, no band-aid mechanics)
-  - No Battlefield Conditions, no Runes.
+  - 9 God Powers (T1 tier only)
+  - No band-aid mechanics
+  - No Battlefield Conditions
+  - No Runes.
 
 Archetype loadouts:
-  AGGRO   : 4x Berserker + 2x Warrior, GPs = Surtr, Fenrir, Tyr
+  AGGRO   : 3x Berserker + 3x Warrior, GPs = Surtr, Fenrir, Tyr
   CONTROL : 3x Warden    + 3x Warrior, GPs = Aegis, Eir, Tyr
   ECONOMY : 3x Miser     + 3x Warrior, GPs = Mjolnir, Gullveig, Bragi
 
@@ -33,70 +35,13 @@ from __future__ import annotations
 
 import argparse
 
-from agents.rule_based.aggro_agent import AggroAgent
-from agents.rule_based.control_agent import MatchupAwareControlAgent
-from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
-from agents.game_aware.aggro_agent import GameAwareAggroAgent
-from agents.game_aware.control_agent import GameAwareControlAgent
-from agents.game_aware.economy_agent import GameAwareEconomyAgent
+from archetypes.level_2 import ARCHETYPES, build_archetypes
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
-from simulator.common.harness_types import Archetype
 from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 
 # ---------------------------------------------------------------------------
 # Archetype definitions
 # ---------------------------------------------------------------------------
-
-
-def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
-    """Build the fixed L2 archetype set using the requested agent family."""
-    if agent_mode == "rule-based":
-        agent_classes = {
-            "AGGRO": AggroAgent,
-            "CONTROL": MatchupAwareControlAgent,
-            "ECONOMY": MatchupAwareEconomyAgent,
-        }
-    elif agent_mode == "game-aware":
-        agent_classes = {
-            "AGGRO": GameAwareAggroAgent,
-            "CONTROL": GameAwareControlAgent,
-            "ECONOMY": GameAwareEconomyAgent,
-        }
-    else:
-        raise ValueError(f"Unknown agent mode: {agent_mode}")
-
-    return {
-        "AGGRO": Archetype(
-            name="AGGRO",
-            dice_ids=(
-                "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
-                "DIE_WARRIOR",   "DIE_WARRIOR",
-            ),
-            gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-            agent_cls=agent_classes["AGGRO"],
-        ),
-        "CONTROL": Archetype(
-            name="CONTROL",
-            dice_ids=(
-                "DIE_WARDEN", "DIE_WARDEN", "DIE_WARDEN",
-                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-            ),
-            gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-            agent_cls=agent_classes["CONTROL"],
-        ),
-        "ECONOMY": Archetype(
-            name="ECONOMY",
-            dice_ids=(
-                "DIE_MISER", "DIE_MISER", "DIE_MISER",
-                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-            ),
-            gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
-            agent_cls=agent_classes["ECONOMY"],
-        ),
-    }
-
-
-ARCHETYPES: dict[str, Archetype] = build_archetypes()
 
 
 # ---------------------------------------------------------------------------

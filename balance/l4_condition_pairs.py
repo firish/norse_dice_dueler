@@ -26,7 +26,7 @@ import itertools
 import json
 import pathlib
 
-from simulator.l3_advanced_dice_pool import TARGETS, build_archetypes
+from archetypes.level_3_advanced import TARGETS, build_archetypes
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
