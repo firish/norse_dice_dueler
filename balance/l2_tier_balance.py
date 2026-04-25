@@ -247,7 +247,7 @@ def main() -> None:
     add_seed_arg(parser)
     parser.add_argument(
         "--agent-mode",
-        choices=("tier-aware", "game-aware-tier"),
+        choices=("tier-aware", "game-aware-tier", "game-aware-tier-loadout"),
         default="game-aware-tier",
         help="agent family to use during tier-profile search",
     )

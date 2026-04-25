@@ -35,9 +35,11 @@ from __future__ import annotations
 
 import argparse
 
-from archetypes.level_2 import GP_MAGNITUDE_ARCHETYPES
-from simulator.common.cli import add_games_arg, add_seed_arg
+from archetypes.level_2 import build_gp_magnitude_archetypes
+from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
+
+DEFAULT_AGENT_MODE = "rule-based"
 
 # ---------------------------------------------------------------------------
 # Archetype definitions
@@ -49,9 +51,13 @@ from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 # ---------------------------------------------------------------------------
 
 
-def run_matrix(games: int, seed: int = 42) -> dict[tuple[str, str], dict]:
+def run_matrix(
+    games: int,
+    seed: int = 42,
+    agent_mode: str = DEFAULT_AGENT_MODE,
+) -> dict[tuple[str, str], dict]:
     """Run the full 3x3 matrix, including mirrors, for reporting purposes."""
-    return run_archetype_matrix(GP_MAGNITUDE_ARCHETYPES, games, seed, include_mirrors=True)
+    return run_archetype_matrix(build_gp_magnitude_archetypes(agent_mode), games, seed, include_mirrors=True)
 
 
 def _format_pct(x: float) -> str:
@@ -59,9 +65,9 @@ def _format_pct(x: float) -> str:
     return f"{x:5.1f}"
 
 
-def print_matrix(results: dict[tuple[str, str], dict]) -> None:
+def print_matrix(results: dict[tuple[str, str], dict], agent_mode: str = DEFAULT_AGENT_MODE) -> None:
     """Print the human-readable L2 balance report."""
-    names = list(GP_MAGNITUDE_ARCHETYPES.keys())
+    names = list(build_gp_magnitude_archetypes(agent_mode).keys())
 
     print()
     print("=" * 60)
@@ -128,11 +134,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_games_arg(parser, default=2000, help_text="games per cell")
     add_seed_arg(parser)
+    add_agent_mode_arg(parser, default=DEFAULT_AGENT_MODE)
     args = parser.parse_args()
 
-    print(f"Running L2 balance matrix: {args.games} games/cell, seed={args.seed}")
-    results = run_matrix(args.games, args.seed)
-    print_matrix(results)
+    print(
+        f"Running L2 balance matrix: {args.games} games/cell, "
+        f"seed={args.seed}, agent_mode={args.agent_mode}"
+    )
+    results = run_matrix(args.games, args.seed, args.agent_mode)
+    print_matrix(results, args.agent_mode)
 
 
 if __name__ == "__main__":

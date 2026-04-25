@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents import Agent, try_gp
+from agents import try_gp
 from agents.game_aware.aggro_agent import GameAwareAggroAgent
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents.game_aware.evaluator import choose_keep_by_scores
+from agents.game_aware.gp_strategy import choose_aggro_gp
 from agents.game_aware.state_features import (
     estimate_total_threat,
     opponent_has_role,
@@ -14,6 +15,8 @@ from agents.game_aware.state_features import (
     view_for,
 )
 from game_mechanics.game_state import GameState
+
+_CANONICAL_GPS = frozenset({"GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"})
 
 
 class GameAwareTierAggroAgent(GameAwareAggroAgent):
@@ -27,8 +30,8 @@ class GameAwareTierAggroAgent(GameAwareAggroAgent):
         view = view_for(state, player_num)
         threat = estimate_total_threat(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
         defense_score = 1.5 if threat >= view.player.hp else -0.5
-        economy_opponent = opponent_has_role(view, "economy")
-        control_opponent = opponent_has_role(view, "control")
+        economy_opponent = opponent_has_role(view, "economy", self._god_powers)
+        control_opponent = opponent_has_role(view, "control", self._god_powers)
         scores = {
             "FACE_AXE": 3.2,
             "FACE_ARROW": 2.7,
@@ -48,48 +51,55 @@ class GameAwareTierAggroAgent(GameAwareAggroAgent):
         return frozenset(kept)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        """Use scored tier choices, with extra anti-Economy burst pressure."""
+        """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
-        player = player_with_available_tokens(view)
+        if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
+            player = player_with_available_tokens(view)
+            for tier_idx in (2, 1, 0):
+                choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (tier_idx,))
+                if choice is not None and self._god_powers["GP_FENRIRS_BITE"].tiers[tier_idx].damage >= view.opponent.hp:
+                    return choice
+            for tier_idx in (2, 1, 0):
+                choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (tier_idx,))
+                if choice is not None and self._god_powers["GP_SURTRS_FLAME"].tiers[tier_idx].damage >= view.opponent.hp:
+                    return choice
 
-        for tier_idx in (2, 1, 0):
-            choice = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (tier_idx,))
-            if choice is not None and self._god_powers["GP_FENRIRS_BITE"].tiers[tier_idx].damage >= view.opponent.hp:
-                return choice
-        for tier_idx in (2, 1, 0):
-            choice = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (tier_idx,))
-            if choice is not None and self._god_powers["GP_SURTRS_FLAME"].tiers[tier_idx].damage >= view.opponent.hp:
-                return choice
+            if opponent_has_role(view, "control", self._god_powers):
+                from agents.game_aware.evaluator import best_scored_gp
 
-        if opponent_has_role(view, "control"):
-            choice = best_scored_gp(
+                choice = best_scored_gp(
+                    view,
+                    self._god_powers,
+                    ("GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT", "GP_SURTRS_FLAME"),
+                    tier_order=(2, 1, 0),
+                    threat_tier_order=(2, 1, 0),
+                    minimum_score=0.1,
+                )
+                if choice is not None:
+                    return choice
+
+            if opponent_has_role(view, "economy", self._god_powers):
+                from agents.game_aware.evaluator import best_scored_gp
+
+                choice = best_scored_gp(
+                    view,
+                    self._god_powers,
+                    ("GP_FENRIRS_BITE", "GP_SURTRS_FLAME", "GP_TYRS_JUDGMENT"),
+                    tier_order=(2, 1, 0),
+                    threat_tier_order=(2, 1, 0),
+                    minimum_score=0.2,
+                )
+                if choice is not None:
+                    return choice
+
+            from agents.game_aware.evaluator import best_scored_gp
+
+            return best_scored_gp(
                 view,
                 self._god_powers,
-                ("GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT", "GP_SURTRS_FLAME"),
-                tier_order=(2, 1, 0),
-                threat_tier_order=(2, 1, 0),
-                minimum_score=0.1,
-            )
-            if choice is not None:
-                return choice
-
-        if opponent_has_role(view, "economy"):
-            choice = best_scored_gp(
-                view,
-                self._god_powers,
-                ("GP_FENRIRS_BITE", "GP_SURTRS_FLAME", "GP_TYRS_JUDGMENT"),
+                ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
                 tier_order=(2, 1, 0),
                 threat_tier_order=(2, 1, 0),
                 minimum_score=0.2,
             )
-            if choice is not None:
-                return choice
-
-        return best_scored_gp(
-            view,
-            self._god_powers,
-            ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
-            tier_order=(2, 1, 0),
-            threat_tier_order=(2, 1, 0),
-            minimum_score=0.2,
-        )
+        return choose_aggro_gp(view, self._god_powers, tier_order=(2, 1, 0), threat_tier_order=(2, 1, 0))

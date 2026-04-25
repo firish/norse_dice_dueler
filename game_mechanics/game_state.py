@@ -39,6 +39,7 @@ class PlayerState:
         PlayerState(
             hp=15,
             tokens=0,
+            die_loadout=("DIE_WARRIOR",) * 6,
             dice_faces=("FACE_AXE", "FACE_ARROW", "FACE_HELMET", "FACE_SHIELD", "FACE_HAND", "FACE_HAND_BORDERED"),
             dice_kept=(False, False, False, False, False, False),
             gp_loadout=("GP_MJOLNIRS_WRATH", "GP_SURTRS_FLAME", "GP_LOKIS_GAMBIT"),
@@ -49,7 +50,8 @@ class PlayerState:
     tokens: int                   # the number of accumalated god favor tokens
     dice_faces: tuple[str, ...]   # face IDs for each of the 6 dice in the loadout
     dice_kept: tuple[bool, ...]   # True = die is locked in for this round
-    gp_loadout: tuple[str, ...] = ()          # GP IDs brought into the match (empty = L0, no GPs)
+    die_loadout: tuple[str, ...] = ()        # die IDs brought into the match
+    gp_loadout: tuple[str, ...] = ()         # GP IDs brought into the match (empty = L0, no GPs)
     gp_choice: tuple[str, int] | None = None  # (gp_id, tier_idx 0-2) chosen this round; None = pass
 
 

@@ -3,6 +3,9 @@
     "id": "GP_SURTRS_FLAME",
     "display_name": "Surtr's Flame",
     "category": "Offense",
+    "primary_role": "burst",
+    "tags": ["damage", "burst", "risky"],
+    "allowed_archetypes": ["AGGRO"],
     "tiers": [
       {
         "tier": "T1",
@@ -32,6 +35,9 @@
     "id": "GP_FENRIRS_BITE",
     "display_name": "Fenrir's Bite",
     "category": "Offense",
+    "primary_role": "finisher",
+    "tags": ["damage", "burst", "finisher"],
+    "allowed_archetypes": ["AGGRO"],
     "tiers": [
       {
         "tier": "T1",
@@ -61,6 +67,9 @@
     "id": "GP_AEGIS_OF_BALDR",
     "display_name": "Aegis of Baldr",
     "category": "Defense",
+    "primary_role": "block",
+    "tags": ["block", "stabilize", "prevention"],
+    "allowed_archetypes": ["CONTROL"],
     "tiers": [
       {
         "tier": "T1",
@@ -90,6 +99,9 @@
     "id": "GP_EIRS_MERCY",
     "display_name": "Eir's Mercy",
     "category": "Defense",
+    "primary_role": "heal",
+    "tags": ["heal", "stabilize", "recovery"],
+    "allowed_archetypes": ["CONTROL"],
     "tiers": [
       {
         "tier": "T1",
@@ -119,6 +131,9 @@
     "id": "GP_BRAGIS_SONG",
     "display_name": "Bragi's Song",
     "category": "Economy",
+    "primary_role": "anti_race",
+    "tags": ["anti_race", "block", "reflect", "stabilize"],
+    "allowed_archetypes": ["CONTROL", "ECONOMY"],
     "tiers": [
       {
         "tier": "T1",
@@ -147,6 +162,9 @@
     "id": "GP_GULLVEIGS_HOARD",
     "display_name": "Gullveig's Hoard",
     "category": "Economy",
+    "primary_role": "ramp",
+    "tags": ["ramp", "economy", "token_gain"],
+    "allowed_archetypes": ["ECONOMY"],
     "tiers": [
       {
         "tier": "T1",
@@ -176,6 +194,9 @@
     "id": "GP_TYRS_JUDGMENT",
     "display_name": "Tyr's Judgment",
     "category": "Hybrid",
+    "primary_role": "hybrid_pressure",
+    "tags": ["damage", "block", "hybrid_pressure", "stabilize"],
+    "allowed_archetypes": ["AGGRO", "CONTROL", "ECONOMY"],
     "tiers": [
       {
         "tier": "T1",
@@ -205,6 +226,9 @@
     "id": "GP_FRIGGS_VEIL",
     "display_name": "Frigg's Veil",
     "category": "Hybrid",
+    "primary_role": "counter",
+    "tags": ["counter", "disruption", "tempo_denial"],
+    "allowed_archetypes": ["AGGRO", "CONTROL", "ECONOMY"],
     "tiers": [
       {
         "tier": "T1",
@@ -237,6 +261,9 @@
     "id": "GP_MJOLNIRS_WRATH",
     "display_name": "Mjölnir's Wrath",
     "category": "Hybrid",
+    "primary_role": "finisher",
+    "tags": ["damage", "finisher", "direct_damage", "cashout"],
+    "allowed_archetypes": ["AGGRO", "ECONOMY"],
     "tiers": [
       {
         "tier": "T1",

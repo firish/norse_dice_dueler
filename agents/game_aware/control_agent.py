@@ -6,6 +6,7 @@ import numpy as np
 
 from agents import Agent
 from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents.game_aware.gp_strategy import choose_control_gp
 from agents.game_aware.state_features import (
     estimate_opponent_gp_damage,
     estimate_total_threat,
@@ -14,6 +15,8 @@ from agents.game_aware.state_features import (
 )
 from game_mechanics.game_state import GameState
 from game_mechanics.god_powers import load_god_powers
+
+_CANONICAL_GPS = frozenset({"GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"})
 
 
 class GameAwareControlAgent(Agent):
@@ -26,8 +29,8 @@ class GameAwareControlAgent(Agent):
     def choose_keep(self, state: GameState, player_num: int) -> frozenset[int]:
         """Keep defense under pressure, otherwise keep enough offense/tokens to close."""
         view = view_for(state, player_num)
-        threat = estimate_total_threat(view)
-        economy_opponent = opponent_has_role(view, "economy")
+        threat = estimate_total_threat(view, god_powers=self._god_powers)
+        economy_opponent = opponent_has_role(view, "economy", self._god_powers)
         scores = {
             "FACE_HELMET": 3.0,
             "FACE_SHIELD": 3.0,
@@ -39,25 +42,25 @@ class GameAwareControlAgent(Agent):
         return choose_keep_by_scores(view, scores, keep_threshold=1.5)
 
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
-        """Use Aegis for real GP danger, Eir when healing matters, Tyr for pressure."""
+        """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
-        incoming_gp = estimate_opponent_gp_damage(view)
-
-        if opponent_has_role(view, "economy") and incoming_gp > 0:
-            choice = best_scored_gp(
+        if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
+            incoming_gp = estimate_opponent_gp_damage(view, god_powers=self._god_powers)
+            if opponent_has_role(view, "economy", self._god_powers) and incoming_gp > 0:
+                choice = best_scored_gp(
+                    view,
+                    self._god_powers,
+                    ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                    tier_order=(0,),
+                    minimum_score=0.5,
+                )
+                if choice is not None:
+                    return choice
+            return best_scored_gp(
                 view,
                 self._god_powers,
-                ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
                 tier_order=(0,),
                 minimum_score=0.5,
             )
-            if choice is not None:
-                return choice
-
-        return best_scored_gp(
-            view,
-            self._god_powers,
-            ("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
-            tier_order=(0,),
-            minimum_score=0.5,
-        )
+        return choose_control_gp(view, self._god_powers, tier_order=(0,), threat_tier_order=(0,))

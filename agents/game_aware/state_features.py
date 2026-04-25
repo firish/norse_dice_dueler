@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from agents.game_aware.gp_loadout import infer_archetype_from_gp_loadout
+from agents.game_aware.loadout_profile import LoadoutProfile, profile_for_loadout
 from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameState, PlayerState
 from game_mechanics.god_powers import GodPower, load_god_powers
@@ -124,15 +126,15 @@ def view_for(state: GameState, player_num: int) -> AgentView:
     )
 
 
-def opponent_has_role(view: AgentView, role: str) -> bool:
-    """Infer an opponent archetype from signature GP ids."""
-    if role == "aggro":
-        return "GP_SURTRS_FLAME" in view.opponent.gp_loadout
-    if role == "control":
-        return "GP_AEGIS_OF_BALDR" in view.opponent.gp_loadout
-    if role == "economy":
-        return "GP_MJOLNIRS_WRATH" in view.opponent.gp_loadout
-    return False
+def opponent_has_role(
+    view: AgentView,
+    role: str,
+    god_powers: dict[str, GodPower] | None = None,
+) -> bool:
+    """Infer an opponent archetype from the currently equipped GP loadout."""
+    god_powers = god_powers if god_powers is not None else _DEFAULT_GOD_POWERS
+    inferred = infer_archetype_from_gp_loadout(view.opponent.gp_loadout, god_powers)
+    return inferred == role.upper()
 
 
 def estimate_opponent_gp_damage(
@@ -144,9 +146,7 @@ def estimate_opponent_gp_damage(
     tokens = view.opponent.tokens + view.opponent.dice_faces.count("FACE_HAND_BORDERED")
     god_powers = god_powers if god_powers is not None else _DEFAULT_GOD_POWERS
     best = 0
-    for gp_id in ("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT", "GP_MJOLNIRS_WRATH"):
-        if gp_id not in view.opponent.gp_loadout:
-            continue
+    for gp_id in view.opponent.gp_loadout:
         gp = god_powers.get(gp_id)
         if gp is None:
             continue
@@ -170,3 +170,8 @@ def estimate_total_threat(
 def player_with_available_tokens(view: AgentView) -> PlayerState:
     """Return a player copy with same-round banked tokens included for GP checks."""
     return replace(view.player, tokens=view.available_tokens)
+
+
+def loadout_profile(player: PlayerState) -> LoadoutProfile:
+    """Return expected-value loadout features for the player's equipped dice."""
+    return profile_for_loadout(player.die_loadout)

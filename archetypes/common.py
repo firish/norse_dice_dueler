@@ -8,6 +8,9 @@ from agents.game_aware.economy_agent import GameAwareEconomyAgent
 from agents.game_aware_tier.aggro_agent import GameAwareTierAggroAgent
 from agents.game_aware_tier.control_agent import GameAwareTierControlAgent
 from agents.game_aware_tier.economy_agent import GameAwareTierEconomyAgent
+from agents.game_aware_tier_loadout.aggro_agent import GameAwareTierLoadoutAggroAgent
+from agents.game_aware_tier_loadout.control_agent import GameAwareTierLoadoutControlAgent
+from agents.game_aware_tier_loadout.economy_agent import GameAwareTierLoadoutEconomyAgent
 from agents.rule_based.aggro_agent import MatchupAwareAggroAgent
 from agents.rule_based.control_agent import MatchupAwareControlAgent
 from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
@@ -35,6 +38,12 @@ def agent_classes(agent_mode: str = "rule-based") -> dict[str, type]:
             "AGGRO": GameAwareTierAggroAgent,
             "CONTROL": GameAwareTierControlAgent,
             "ECONOMY": GameAwareTierEconomyAgent,
+        }
+    if agent_mode == "game-aware-tier-loadout":
+        return {
+            "AGGRO": GameAwareTierLoadoutAggroAgent,
+            "CONTROL": GameAwareTierLoadoutControlAgent,
+            "ECONOMY": GameAwareTierLoadoutEconomyAgent,
         }
     if agent_mode == "game-aware":
         return {

@@ -21,55 +21,18 @@ Run:
 from __future__ import annotations
 
 import argparse
-import json
-import pathlib
 
-from archetypes.level_3_advanced import TARGETS, build_archetypes
+from game_mechanics.conditions import load_condition_list
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
-from simulator.common.matchup_runner import (
-    matrix_error as compute_matrix_error,
-    run_matrix as run_archetype_matrix,
+from simulator.common.level_4 import (
+    DEFAULT_LEVEL_4_AGENT_MODE,
+    DRIFT_PASS_THRESHOLD,
+    level_4_matrix_error,
+    max_drift,
+    print_level_4_baseline,
+    run_condition_matrix,
 )
 from simulator.common.reporting import print_directional_deltas, print_directional_rows
-
-DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-DRIFT_PASS_THRESHOLD = 10.0
-
-
-def load_conditions() -> list[dict]:
-    """Load the current location roster from the JSON data file."""
-    path = DATA_DIR / "conditions.json"
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def run_matrix(
-    games: int,
-    seed: int,
-    condition_id: str | None,
-    agent_mode: str = "rule-based",
-) -> dict[tuple[str, str], dict]:
-    """Run the full off-diagonal matrix for one condition (or baseline if none)."""
-    archetypes = build_archetypes(agent_mode)
-    return run_archetype_matrix(
-        archetypes,
-        games,
-        seed,
-        include_mirrors=False,
-        condition_id=condition_id,
-    )
-
-
-def matrix_error(results: dict[tuple[str, str], dict]) -> float:
-    """Return absolute error from the target directional matrix."""
-    return compute_matrix_error(results, TARGETS)
-
-
-def max_drift(
-    baseline: dict[tuple[str, str], dict],
-    condition_results: dict[tuple[str, str], dict],
-) -> float:
-    """Return the worst absolute directional swing versus the no-condition baseline."""
-    return max(abs(condition_results[key]["p1_rate"] - baseline[key]["p1_rate"]) for key in TARGETS)
 
 
 def print_condition_report(
@@ -83,21 +46,14 @@ def print_condition_report(
     print(f"{condition['id']} - {condition['display_name']} [{verdict}]")
     print(f"  Effect: {condition['effect']}")
     print(f"  Max drift: {drift:.1f}pp")
-    print(f"  Matrix error: {matrix_error(results):.1f}")
+    print(f"  Matrix error: {level_4_matrix_error(results):.1f}")
     print_directional_deltas(baseline, results)
     print()
 
 
 def print_baseline(results: dict[tuple[str, str], dict]) -> None:
     """Print the no-condition L3B baseline used by the drift sweep."""
-    print("L4 CONDITIONS BASELINE")
-    print("Baseline package: L3B fixed rule")
-    print("  Aggro   = 3 Warrior + 2 Berserker + 1 Gambler")
-    print("  Control = 3 Warrior + 2 Warden + 1 Skald")
-    print("  Economy = 3 Warrior + 2 Miser + 1 Hunter")
-    print(f"  Baseline matrix error: {matrix_error(results):.1f}")
-    print_directional_rows(results)
-    print()
+    print_level_4_baseline("L4 CONDITIONS BASELINE", results, print_rows=print_directional_rows)
 
 
 def main() -> None:
@@ -106,14 +62,14 @@ def main() -> None:
     add_games_arg(parser, default=120)
     add_seed_arg(parser)
     parser.add_argument("--condition", type=str, default="", help="evaluate only one condition id")
-    add_agent_mode_arg(parser)
+    add_agent_mode_arg(parser, default=DEFAULT_LEVEL_4_AGENT_MODE)
     args = parser.parse_args()
 
     print(f"Agent mode: {args.agent_mode}")
-    baseline = run_matrix(args.games, args.seed, None, args.agent_mode)
+    baseline = run_condition_matrix(args.games, args.seed, agent_mode=args.agent_mode)
     print_baseline(baseline)
 
-    conditions = load_conditions()
+    conditions = load_condition_list()
     if args.condition:
         conditions = [cond for cond in conditions if cond["id"] == args.condition]
         if not conditions:
@@ -121,7 +77,12 @@ def main() -> None:
 
     reports = []
     for condition in conditions:
-        results = run_matrix(args.games, args.seed, condition["id"], args.agent_mode)
+        results = run_condition_matrix(
+            args.games,
+            args.seed,
+            condition_id=condition["id"],
+            agent_mode=args.agent_mode,
+        )
         reports.append((max_drift(baseline, results), condition, results))
 
     reports.sort(key=lambda item: item[0])

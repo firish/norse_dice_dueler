@@ -66,7 +66,27 @@ class GodPower:
     id: str
     display_name: str
     category: str       # "Offense", "Defense", "Utility", "Hybrid"
+    primary_role: str
+    tags: tuple[str, ...]
+    allowed_archetypes: tuple[str, ...]
     tiers: tuple[GodPowerTier, ...]   # always length 3
+
+    def has_tag(self, tag: str) -> bool:
+        """Return whether this GP carries a specific secondary tag."""
+        return tag in self.tags
+
+    def matches_role_or_tag(
+        self,
+        *,
+        primary_roles: tuple[str, ...] = (),
+        tags: tuple[str, ...] = (),
+    ) -> bool:
+        """Return whether this GP matches any requested role or secondary tag."""
+        return self.primary_role in primary_roles or any(tag in self.tags for tag in tags)
+
+    def is_allowed_for(self, archetype: str) -> bool:
+        """Return whether this GP can belong to a named archetype pool."""
+        return archetype in self.allowed_archetypes
 
 
 def _parse_tier(raw: dict) -> GodPowerTier:
@@ -108,6 +128,9 @@ def load_god_powers(path: pathlib.Path | None = None) -> dict[str, GodPower]:
             id=gp["id"],
             display_name=gp["display_name"],
             category=gp["category"],
+            primary_role=gp.get("primary_role", gp["category"].lower()),
+            tags=tuple(gp.get("tags", [])),
+            allowed_archetypes=tuple(gp.get("allowed_archetypes", ())),
             tiers=tuple(_parse_tier(t) for t in gp["tiers"]),
         )
         for gp in raw

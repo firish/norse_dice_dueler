@@ -23,37 +23,24 @@ from __future__ import annotations
 
 import argparse
 import itertools
-import json
-import pathlib
 
-from archetypes.level_3_advanced import TARGETS, build_archetypes
+from game_mechanics.conditions import (
+    load_approved_condition_pairs,
+    load_conditions,
+    load_reserve_condition_pairs,
+)
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
-from simulator.common.matchup_runner import (
-    matrix_error as compute_matrix_error,
-    run_matrix as run_archetype_matrix,
+from simulator.common.level_4 import (
+    DEFAULT_LEVEL_4_AGENT_MODE,
+    DRIFT_IDEAL_MAX,
+    DRIFT_IDEAL_MIN,
+    DRIFT_PASS_THRESHOLD,
+    level_4_matrix_error,
+    max_drift,
+    print_level_4_baseline,
+    run_condition_matrix,
 )
 from simulator.common.reporting import print_directional_deltas, print_directional_rows
-
-DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-DRIFT_PASS_THRESHOLD = 10.0
-DRIFT_IDEAL_MIN = 5.0
-DRIFT_IDEAL_MAX = 10.0
-
-
-def load_conditions() -> dict[str, dict]:
-    """Load the location catalog keyed by condition id."""
-    path = DATA_DIR / "conditions.json"
-    return {cond["id"]: cond for cond in json.loads(path.read_text(encoding="utf-8"))}
-
-
-def load_condition_pairs(include_reserves: bool) -> list[tuple[str, str]]:
-    """Load the approved unordered pair pool, optionally adding reserve pairs."""
-    path = DATA_DIR / "condition_pairs.json"
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    pairs = [tuple(entry["ids"]) for entry in raw["approved_pairs"]]
-    if include_reserves:
-        pairs.extend(tuple(entry["ids"]) for entry in raw["reserve_pairs"])
-    return pairs
 
 
 def all_condition_pairs(conditions: dict[str, dict]) -> list[tuple[str, str]]:
@@ -61,46 +48,9 @@ def all_condition_pairs(conditions: dict[str, dict]) -> list[tuple[str, str]]:
     return list(itertools.combinations(conditions.keys(), 2))
 
 
-def run_matrix(
-    games: int,
-    seed: int,
-    condition_ids: tuple[str, ...] | None,
-    agent_mode: str = "rule-based",
-) -> dict[tuple[str, str], dict]:
-    """Run the full off-diagonal matrix for one condition pair."""
-    archetypes = build_archetypes(agent_mode)
-    return run_archetype_matrix(
-        archetypes,
-        games,
-        seed,
-        include_mirrors=False,
-        condition_ids=condition_ids,
-    )
-
-
-def matrix_error(results: dict[tuple[str, str], dict]) -> float:
-    """Return absolute error from the target directional matrix."""
-    return compute_matrix_error(results, TARGETS)
-
-
-def max_drift(
-    baseline: dict[tuple[str, str], dict],
-    pair_results: dict[tuple[str, str], dict],
-) -> float:
-    """Return the worst absolute directional swing versus the no-condition baseline."""
-    return max(abs(pair_results[key]["p1_rate"] - baseline[key]["p1_rate"]) for key in TARGETS)
-
-
 def print_baseline(results: dict[tuple[str, str], dict]) -> None:
     """Print the no-condition L3B baseline used by pair validation."""
-    print("L4 CONDITION PAIRS BASELINE")
-    print("Baseline package: L3B fixed rule")
-    print("  Aggro   = 3 Warrior + 2 Berserker + 1 Gambler")
-    print("  Control = 3 Warrior + 2 Warden + 1 Skald")
-    print("  Economy = 3 Warrior + 2 Miser + 1 Hunter")
-    print(f"  Baseline matrix error: {matrix_error(results):.1f}")
-    print_directional_rows(results)
-    print()
+    print_level_4_baseline("L4 CONDITION PAIRS BASELINE", results, print_rows=print_directional_rows)
 
 
 def print_pair_report(
@@ -122,7 +72,7 @@ def print_pair_report(
     print(f"  A: {conditions[a]['display_name']} - {conditions[a]['effect']}")
     print(f"  B: {conditions[b]['display_name']} - {conditions[b]['effect']}")
     print(f"  Max drift: {drift:.1f}pp")
-    print(f"  Matrix error: {matrix_error(results):.1f}")
+    print(f"  Matrix error: {level_4_matrix_error(results):.1f}")
     print_directional_deltas(baseline, results)
     print()
 
@@ -143,17 +93,17 @@ def main() -> None:
         action="store_true",
         help="include reserve pairs from data/condition_pairs.json",
     )
-    add_agent_mode_arg(parser)
+    add_agent_mode_arg(parser, default=DEFAULT_LEVEL_4_AGENT_MODE)
     args = parser.parse_args()
 
     print(f"Agent mode: {args.agent_mode}")
-    baseline = run_matrix(args.games, args.seed, None, args.agent_mode)
+    baseline = run_condition_matrix(args.games, args.seed, agent_mode=args.agent_mode)
     print_baseline(baseline)
 
     conditions = load_conditions()
-    pairs = all_condition_pairs(conditions) if args.all_pairs else load_condition_pairs(
-        include_reserves=args.include_reserves
-    )
+    pairs = all_condition_pairs(conditions) if args.all_pairs else load_approved_condition_pairs()
+    if args.include_reserves and not args.all_pairs:
+        pairs.extend(load_reserve_condition_pairs())
     if args.pair:
         raw = tuple(part.strip() for part in args.pair.split(",") if part.strip())
         if len(raw) != 2:
@@ -164,7 +114,12 @@ def main() -> None:
 
     reports = []
     for pair in pairs:
-        results = run_matrix(args.games, args.seed, pair, args.agent_mode)
+        results = run_condition_matrix(
+            args.games,
+            args.seed,
+            condition_ids=pair,
+            agent_mode=args.agent_mode,
+        )
         reports.append((max_drift(baseline, results), pair, results))
 
     reports.sort(key=lambda item: item[0])

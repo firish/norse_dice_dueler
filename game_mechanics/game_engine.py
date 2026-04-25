@@ -159,6 +159,7 @@ class GameEngine:
                 tokens=STARTING_TOKENS,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
+                die_loadout=tuple(die.id for die in self.p1_die_types),
                 gp_loadout=self.p1_gp_ids,
             ),
             p2=PlayerState(
@@ -166,6 +167,7 @@ class GameEngine:
                 tokens=STARTING_TOKENS,
                 dice_faces=_BLANK_FACES,
                 dice_kept=_ALL_FREE,
+                die_loadout=tuple(die.id for die in self.p2_die_types),
                 gp_loadout=self.p2_gp_ids,
             ),
             winner=None,

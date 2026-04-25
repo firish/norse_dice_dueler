@@ -58,19 +58,19 @@ def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
     }
 
 
-def build_gp_rps_archetypes() -> dict[str, Archetype]:
+def build_gp_rps_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
     """Build the canonical L2 GP-RPS package using baseline matchup-aware pilots."""
-    return build_archetypes("rule-based")
+    return build_archetypes(agent_mode)
 
 
-def build_gp_magnitude_archetypes() -> dict[str, Archetype]:
+def build_gp_magnitude_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
     """Build the canonical L2 GP-magnitude package using baseline matchup-aware pilots."""
-    return build_archetypes("rule-based")
+    return build_archetypes(agent_mode)
 
 
-def build_gp_tier_archetypes() -> dict[str, Archetype]:
+def build_gp_tier_archetypes(agent_mode: str = "game-aware-tier") -> dict[str, Archetype]:
     """Build the canonical L2 GP-tier package using game+tier-aware pilots."""
-    return build_archetypes("game-aware-tier")
+    return build_archetypes(agent_mode)
 
 
 ARCHETYPES: dict[str, Archetype] = build_gp_rps_archetypes()

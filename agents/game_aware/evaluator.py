@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 
 from agents import try_gp
 from agents.game_aware.state_features import AgentView, estimate_opponent_gp_damage, player_with_available_tokens
@@ -116,6 +116,7 @@ def best_scored_gp(
     tier_order: Iterable[int] = (0,),
     threat_tier_order: Iterable[int] = (0,),
     minimum_score: float = 0.5,
+    choice_filter: Callable[[str, int], bool] | None = None,
 ) -> tuple[str, int] | None:
     """Return the highest-scoring affordable GP from a priority-filtered set."""
     best_choice: tuple[str, int] | None = None
@@ -126,6 +127,8 @@ def best_scored_gp(
         for tier_idx in tier_order:
             choice = try_gp(player_with_available_tokens(view), god_powers, gp_id, (tier_idx,))
             if choice is None:
+                continue
+            if choice_filter is not None and not choice_filter(gp_id, tier_idx):
                 continue
             score = score_gp_choice(view, god_powers, choice, threat_tier_order=threat_tier_order)
             if score > best_score:

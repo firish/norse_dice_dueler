@@ -28,15 +28,17 @@ from __future__ import annotations
 
 import argparse
 
-from archetypes.level_2 import GP_RPS_ARCHETYPES
-from simulator.common.cli import add_games_arg, add_seed_arg
+from archetypes.level_2 import build_gp_rps_archetypes
+from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import run_matrix as run_archetype_matrix
 from simulator.common.reporting import print_directional_rows
 
+DEFAULT_AGENT_MODE = "rule-based"
 
-def run_identity(games: int, seed: int) -> dict[tuple[str, str], dict]:
+
+def run_identity(games: int, seed: int, agent_mode: str = DEFAULT_AGENT_MODE) -> dict[tuple[str, str], dict]:
     """Run the off-diagonal identity matrix for Aggro, Control, and Economy."""
-    return run_archetype_matrix(GP_RPS_ARCHETYPES, games, seed, include_mirrors=False)
+    return run_archetype_matrix(build_gp_rps_archetypes(agent_mode), games, seed, include_mirrors=False)
 
 
 def identity_passes(results: dict[tuple[str, str], dict]) -> bool:
@@ -68,10 +70,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     add_games_arg(parser, default=500)
     add_seed_arg(parser)
+    add_agent_mode_arg(parser, default=DEFAULT_AGENT_MODE)
     args = parser.parse_args()
 
-    print(f"Running L2 identity check: {args.games} games/matchup, seed={args.seed}")
-    results = run_identity(args.games, args.seed)
+    print(
+        f"Running L2 identity check: {args.games} games/matchup, "
+        f"seed={args.seed}, agent_mode={args.agent_mode}"
+    )
+    results = run_identity(args.games, args.seed, args.agent_mode)
     print_results(results)
 
 
