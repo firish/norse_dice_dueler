@@ -1,12 +1,8 @@
-"""Canonical L3 core-dice package shared by the benchmark harnesses.
+"""Canonical L3 core-dice archetype package.
 
-What this file does:
-  - Defines the approved L3A package chosen from the legal core-dice grammar.
-  - Exposes the canonical target matrix for L3 core validation.
-
-What this file does not do:
-  - Enumerate every legal core-dice package for search.
-  - Perform ranking or balancing sweeps.
+This file intentionally hardcodes the currently approved L3A package so the
+benchmark harness is easy to read. If we later reselect candidates from
+`exploration/`, we can update these dice lists directly.
 """
 
 from __future__ import annotations
@@ -23,36 +19,41 @@ TARGETS: dict[tuple[str, str], float] = {
     ("ECONOMY", "CONTROL"): 60.0,
 }
 
-APPROVED_PACKAGE_NAME = "A_CORE_B111,C_CORE_B111,E_CORE_B111"
+APPROVED_PACKAGE_NAME = "A_CORE_B300,C_CORE_B021,E_CORE_B102"
 
 
 def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
-    """Build the approved L3A core-dice package using the requested pilot family."""
+    """Build the approved L3 core package using the requested pilots."""
     classes = agent_classes(agent_mode)
-    shared_dice = (
-        "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
-        "DIE_BERSERKER", "DIE_WARDEN", "DIE_MISER",
-    )
     return {
         "AGGRO": Archetype(
             name="AGGRO",
-            dice_ids=shared_dice,
+            dice_ids=(
+                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+                "DIE_BERSERKER", "DIE_BERSERKER", "DIE_BERSERKER",
+            ),
             gp_ids=("GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"),
             agent_cls=classes["AGGRO"],
         ),
         "CONTROL": Archetype(
             name="CONTROL",
-            dice_ids=shared_dice,
+            dice_ids=(
+                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+                "DIE_WARDEN", "DIE_WARDEN", "DIE_MISER",
+            ),
             gp_ids=("GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"),
             agent_cls=classes["CONTROL"],
         ),
         "ECONOMY": Archetype(
             name="ECONOMY",
-            dice_ids=shared_dice,
+            dice_ids=(
+                "DIE_WARRIOR", "DIE_WARRIOR", "DIE_WARRIOR",
+                "DIE_BERSERKER", "DIE_MISER", "DIE_MISER",
+            ),
             gp_ids=("GP_MJOLNIRS_WRATH", "GP_GULLVEIGS_HOARD", "GP_BRAGIS_SONG"),
             agent_cls=classes["ECONOMY"],
         ),
     }
 
 
-ARCHETYPES: dict[str, Archetype] = build_archetypes()
+ARCHETYPES = build_archetypes()

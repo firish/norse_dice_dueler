@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import argparse
 
-from archetypes.level_3_advanced import ARCHETYPES, TARGETS, build_archetypes
+from archetypes.level_3_advanced import APPROVED_PACKAGE_NAME, ARCHETYPES, TARGETS, build_archetypes
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
 from simulator.common.matchup_runner import (
     matrix_error as compute_matrix_error,
@@ -54,9 +54,10 @@ def print_results(results: dict[tuple[str, str], dict]) -> None:
     """Print the approved L3B baseline report."""
     print("L3B ADVANCED DICE")
     print("Rule: 3 Warrior + 2 core + 1 advanced")
-    print("  Aggro   = 3 Warrior + 2 Berserker + 1 Gambler")
-    print("  Control = 3 Warrior + 2 Warden + 1 Skald")
-    print("  Economy = 3 Warrior + 2 Miser + 1 Hunter")
+    print(f"Approved package: {APPROVED_PACKAGE_NAME}")
+    print("  Aggro    = 3 Warrior + Berserker + Berserker + Gambler")
+    print("  Control  = 3 Warrior + Warden + Warden + Skald")
+    print("  Economy  = 3 Warrior + Miser + Miser + Hunter")
     print_directional_rows(results)
     print(f"  Matrix error: {matrix_error(results):.1f}")
 

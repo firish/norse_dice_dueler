@@ -1,4 +1,9 @@
-"""Canonical L3 advanced-dice archetype package."""
+"""Canonical L3 advanced-dice archetype package.
+
+This file intentionally hardcodes the currently approved L3B package so the
+benchmark harness is easy to read. If we later reselect candidates from
+`exploration/`, we can update these dice lists directly.
+"""
 
 from __future__ import annotations
 
@@ -14,9 +19,11 @@ TARGETS: dict[tuple[str, str], float] = {
     ("ECONOMY", "CONTROL"): 60.0,
 }
 
+APPROVED_PACKAGE_NAME = "A_ADV_C200_GAMBLER,C_ADV_C020_SKALD,E_ADV_C002_HUNTER"
+
 
 def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
-    """Build the approved L3 advanced-dice package using the requested pilots."""
+    """Build the approved L3 advanced package using the requested pilots."""
     classes = agent_classes(agent_mode)
     return {
         "AGGRO": Archetype(
@@ -49,4 +56,4 @@ def build_archetypes(agent_mode: str = "rule-based") -> dict[str, Archetype]:
     }
 
 
-ARCHETYPES: dict[str, Archetype] = build_archetypes()
+ARCHETYPES = build_archetypes()

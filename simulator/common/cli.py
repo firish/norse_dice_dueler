@@ -32,7 +32,7 @@ def add_agent_mode_arg(
     """Add the shared `--agent-mode` selector to a harness parser."""
     parser.add_argument(
         "--agent-mode",
-        choices=("rule-based", "game-aware"),
+        choices=("rule-based", "game-aware", "tier-aware", "game-aware-tier"),
         default=default,
         help="agent family to use for the archetype pilots",
     )

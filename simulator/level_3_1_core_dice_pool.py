@@ -2,7 +2,7 @@
 
 What this file does:
   - Validates the fixed approved L3A core-dice package.
-  - Checks whether the constrained 3 Warrior + 3 family-dice rule preserves balance.
+  - Checks whether the constrained 3 Warrior + 3 core-dice rule preserves balance.
 
 What this file does not do:
   - Search across the legal L3A package space.
@@ -38,9 +38,9 @@ def print_results(results: dict[tuple[str, str], dict]) -> None:
     print("Rule: 3 Warrior + approved 3-die core package")
     print(f"Approved package: {APPROVED_PACKAGE_NAME}")
     print("Core pool: Berserker / Warden / Miser")
-    print("  Aggro   = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
-    print("  Control = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
-    print("  Economy = 3 Warrior + 1 Berserker + 1 Warden + 1 Miser")
+    print("  Aggro    = 3 Warrior + Berserker + Berserker + Berserker")
+    print("  Control  = 3 Warrior + Warden + Warden + Miser")
+    print("  Economy  = 3 Warrior + Berserker + Miser + Miser")
     print_directional_rows(results)
     print(f"  Matrix error: {matrix_error(results):.1f}")
 
