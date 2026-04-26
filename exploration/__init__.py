@@ -1,7 +1,7 @@
-"""Exploration tools for candidate-pool sweeps, tournaments, and stress tests.
+"""Exploration tools for realistic variant tournaments and meta analysis.
 
 `simulator/` holds fixed benchmark harnesses.
 `balance/` holds numeric tuning/search.
-`exploration/` holds legal-candidate enumeration and competitive selection tools.
+`exploration/` holds curated realistic candidate pools plus tournament, matrix,
+selection, and answer-check tools.
 """
-

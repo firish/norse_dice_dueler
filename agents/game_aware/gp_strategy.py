@@ -14,6 +14,7 @@ from agents.game_aware.gp_loadout import (
 from agents.game_aware.state_features import (
     AgentView,
     estimate_opponent_gp_damage,
+    estimate_opponent_gp_value,
     estimate_total_threat,
     opponent_has_role,
 )
@@ -152,25 +153,37 @@ def choose_control_gp(
     """Choose an equipped GP for a Control pilot using role-aware priorities."""
     groups = _role_groups(view, god_powers)
     incoming_gp = estimate_opponent_gp_damage(view, tier_order=threat_tier_order, god_powers=dict(god_powers))
+    incoming_gp_value = estimate_opponent_gp_value(view, tier_order=threat_tier_order, god_powers=dict(god_powers))
     threat = estimate_total_threat(view, tier_order=threat_tier_order, god_powers=dict(god_powers))
 
     if opponent_has_role(view, "economy", dict(god_powers)):
+        if (incoming_gp_value >= 4.0 or view.opponent.tokens >= 5) and groups["counter"]:
+            counter = best_scored_gp(
+                view,
+                god_powers,
+                merge_gp_priority_groups(groups["counter"], groups["all"]),
+                tier_order=tier_order,
+                threat_tier_order=threat_tier_order,
+                minimum_score=-0.1,
+            )
+            if counter is not None:
+                return counter
         if threat < max(5, view.player.hp):
             proactive = best_scored_gp(
                 view,
                 god_powers,
-                merge_gp_priority_groups(groups["hybrid"], groups["counter"], groups["all"]),
+                merge_gp_priority_groups(groups["counter"], groups["hybrid"], groups["anti_race"], groups["all"]),
                 tier_order=tier_order,
                 threat_tier_order=threat_tier_order,
                 minimum_score=-999.0,
             )
             if proactive is not None:
                 return proactive
-        if incoming_gp > 0:
+        if incoming_gp > 0 or incoming_gp_value >= 4.0:
             direct_answer = best_scored_gp(
                 view,
                 god_powers,
-                merge_gp_priority_groups(groups["hybrid"], groups["block"], groups["heal"], groups["all"]),
+                merge_gp_priority_groups(groups["counter"], groups["hybrid"], groups["anti_race"], groups["block"], groups["heal"], groups["all"]),
                 tier_order=tier_order,
                 threat_tier_order=threat_tier_order,
                 minimum_score=0.2,
@@ -181,7 +194,7 @@ def choose_control_gp(
     return best_scored_gp(
         view,
         god_powers,
-        merge_gp_priority_groups(groups["block"], groups["heal"], groups["hybrid"], groups["all"]),
+        merge_gp_priority_groups(groups["block"], groups["heal"], groups["anti_race"], groups["hybrid"], groups["all"]),
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
         minimum_score=0.2,

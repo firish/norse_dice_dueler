@@ -6,9 +6,11 @@ import numpy as np
 
 from agents import Agent
 from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents.game_aware.location_rules import gp_activation_blocked
 from agents.game_aware.gp_strategy import choose_control_gp
 from agents.game_aware.state_features import (
     estimate_opponent_gp_damage,
+    estimate_opponent_gp_value,
     estimate_total_threat,
     opponent_has_role,
     view_for,
@@ -44,9 +46,24 @@ class GameAwareControlAgent(Agent):
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
+        if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+            return None
         if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
             incoming_gp = estimate_opponent_gp_damage(view, god_powers=self._god_powers)
-            if opponent_has_role(view, "economy", self._god_powers) and incoming_gp > 0:
+            incoming_gp_value = estimate_opponent_gp_value(view, god_powers=self._god_powers)
+            threat = estimate_total_threat(view, god_powers=self._god_powers)
+            if opponent_has_role(view, "economy", self._god_powers):
+                if threat < max(5, view.player.hp):
+                    choice = best_scored_gp(
+                        view,
+                        self._god_powers,
+                        ("GP_TYRS_JUDGMENT", "GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY"),
+                        tier_order=(0,),
+                        minimum_score=0.25,
+                    )
+                    if choice is not None:
+                        return choice
+            if opponent_has_role(view, "economy", self._god_powers) and (incoming_gp > 0 or incoming_gp_value >= 4.0):
                 choice = best_scored_gp(
                     view,
                     self._god_powers,

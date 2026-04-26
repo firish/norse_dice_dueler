@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from agents.game_aware.gp_loadout import infer_archetype_from_gp_loadout
+from agents.game_aware.location_rules import effective_gp_cost, gp_activation_blocked
 from agents.game_aware.loadout_profile import LoadoutProfile, profile_for_loadout
 from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameState, PlayerState
@@ -56,14 +57,7 @@ class AgentView:
     @property
     def banked_tokens(self) -> int:
         """Bordered-hand tokens available at GP timing under current rules."""
-        extra = self.player.dice_faces.count("FACE_HAND_BORDERED")
-        freya_start_round = int(condition_param("COND_FREYA_BLESSING", "start_round", 6))
-        freya_threshold = int(condition_param("COND_FREYA_BLESSING", "bordered_threshold", 2))
-        freya_bonus_tokens = int(condition_param("COND_FREYA_BLESSING", "bonus_tokens", 1))
-        if self.has_condition("COND_FREYA_BLESSING") and self.state.round_num >= freya_start_round:
-            if self.player.dice_faces.count("FACE_HAND_BORDERED") >= freya_threshold:
-                extra += freya_bonus_tokens
-        return extra
+        return banked_tokens_for_player(self.state, self.player)
 
     @property
     def available_tokens(self) -> int:
@@ -87,6 +81,18 @@ class AgentView:
 def count_faces(player: PlayerState, face_id: str) -> int:
     """Count visible dice faces for one player."""
     return player.dice_faces.count(face_id)
+
+
+def banked_tokens_for_player(state: GameState, player: PlayerState) -> int:
+    """Return same-round banked tokens for any player under current L4 rules."""
+    extra = count_faces(player, "FACE_HAND_BORDERED")
+    freya_start_round = int(condition_param("COND_FREYA_BLESSING", "start_round", 6))
+    freya_threshold = int(condition_param("COND_FREYA_BLESSING", "bordered_threshold", 2))
+    freya_bonus_tokens = int(condition_param("COND_FREYA_BLESSING", "bonus_tokens", 1))
+    if "COND_FREYA_BLESSING" in state.condition_ids and state.round_num >= freya_start_round:
+        if count_faces(player, "FACE_HAND_BORDERED") >= freya_threshold:
+            extra += freya_bonus_tokens
+    return extra
 
 
 def combat_preview(player: PlayerState, opponent: PlayerState) -> CombatPreview:
@@ -143,7 +149,9 @@ def estimate_opponent_gp_damage(
     god_powers: dict[str, GodPower] | None = None,
 ) -> int:
     """Estimate the largest immediate offensive GP damage the opponent can afford."""
-    tokens = view.opponent.tokens + view.opponent.dice_faces.count("FACE_HAND_BORDERED")
+    if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+        return 0
+    tokens = view.opponent.tokens + banked_tokens_for_player(view.state, view.opponent)
     god_powers = god_powers if god_powers is not None else _DEFAULT_GOD_POWERS
     best = 0
     for gp_id in view.opponent.gp_loadout:
@@ -152,9 +160,65 @@ def estimate_opponent_gp_damage(
             continue
         for tier_idx in tier_order:
             tier = gp.tiers[tier_idx]
-            if tokens >= tier.cost:
+            if tokens >= effective_gp_cost(tier.cost, view.state.round_num, view.state.condition_ids):
                 best = max(best, int(tier.damage))
                 break
+    return best
+
+
+def estimate_opponent_gp_value(
+    view: AgentView,
+    tier_order: tuple[int, ...] = (0,),
+    god_powers: dict[str, GodPower] | None = None,
+) -> float:
+    """Estimate the opponent's best affordable GP impact, not just raw damage."""
+    if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+        return 0.0
+    tokens = view.opponent.tokens + banked_tokens_for_player(view.state, view.opponent)
+    god_powers = god_powers if god_powers is not None else _DEFAULT_GOD_POWERS
+    max_seen_hp = max(15, view.player.hp, view.opponent.hp)
+    if "COND_YGGDRASIL_ROOTS" in view.state.condition_ids:
+        bonus_hp = int(condition_param("COND_YGGDRASIL_ROOTS", "bonus_hp", 2))
+        max_seen_hp = max(max_seen_hp, 15 + bonus_hp)
+    opponent_missing_hp = max(0, max_seen_hp - view.opponent.hp)
+    best = 0.0
+
+    for gp_id in view.opponent.gp_loadout:
+        gp = god_powers.get(gp_id)
+        if gp is None:
+            continue
+        for tier_idx in tier_order:
+            tier = gp.tiers[tier_idx]
+            effective_cost = effective_gp_cost(tier.cost, view.state.round_num, view.state.condition_ids)
+            if tokens < effective_cost:
+                continue
+
+            score = 0.0
+            if tier.damage:
+                score += min(float(tier.damage), float(view.player.hp)) * 2.2
+                if tier.damage >= view.player.hp:
+                    score += 4.0
+            if tier.token_gain:
+                score += max(0, tier.token_gain - effective_cost) * 2.2
+                score += min(tier.token_gain, 4) * 0.4
+            if tier.block_amount:
+                score += min(tier.block_amount, view.combat.outgoing_total) * 1.2
+            if tier.damage_reduction:
+                score += min(tier.damage_reduction, view.combat.outgoing_total) * 1.4
+            if tier.heal:
+                score += min(tier.heal, opponent_missing_hp) * 1.6
+            if tier.cancel_gp:
+                score += 3.0 if view.available_tokens > 0 else 1.0
+            if gp.primary_role == "ramp":
+                score += 0.8
+            elif gp.primary_role == "finisher":
+                score += 0.5
+            elif gp.primary_role == "counter":
+                score += 0.4
+
+            best = max(best, score)
+            break
+
     return best
 
 

@@ -2,9 +2,9 @@
   {
     "id": "COND_ODIN_GAZE",
     "display_name": "Óðinn's Gaze",
-    "effect": "During the first 2 rounds, the final reroll is skipped.",
+    "effect": "During round 1, the final reroll is skipped.",
     "params": {
-      "active_rounds": 2
+      "active_rounds": 1
     },
     "archetype_skew": "Favors Aggro (take what you roll). Hurts Control (relies on rerolls).",
     "rarity": "Common"
@@ -22,10 +22,10 @@
   {
     "id": "COND_FENRIR_HUNT",
     "display_name": "Fenrir's Hunt",
-    "effect": "From round 5 onwards, if you attacked with 3+ combat faces and all combat dice damage was blocked, deal +1 damage.",
+    "effect": "From round 6 onwards, if you attacked with 4+ combat faces and all combat dice damage was blocked, deal +1 damage.",
     "params": {
-      "start_round": 5,
-      "min_combat_faces": 3,
+      "start_round": 6,
+      "min_combat_faces": 4,
       "bonus_damage": 1
     },
     "archetype_skew": "Favors Aggro with focused dice. Neutral for others.",
@@ -34,9 +34,9 @@
   {
     "id": "COND_YGGDRASIL_ROOTS",
     "display_name": "Yggdrasil's Roots",
-    "effect": "Both players start with +2 HP (17 total).",
+    "effect": "Both players start with +1 HP (16 total).",
     "params": {
-      "bonus_hp": 2
+      "bonus_hp": 1
     },
     "archetype_skew": "Favors Control and Combo (longer matches). Hurts Aggro.",
     "rarity": "Common"
@@ -44,9 +44,9 @@
   {
     "id": "COND_RAGNAROK",
     "display_name": "Ragnarök's Shadow",
-    "effect": "From round 6 onwards, both players lose 1 HP at end of each round.",
+    "effect": "From round 7 onwards, both players lose 1 HP at end of each round.",
     "params": {
-      "start_round": 6,
+      "start_round": 7,
       "hp_loss": 1
     },
     "archetype_skew": "Favors Aggro and Combo (ticking clock). Hurts Control (turtle).",
@@ -77,9 +77,9 @@
   {
     "id": "COND_LOKI_MISCHIEF",
     "display_name": "Loki's Mischief",
-    "effect": "During the first 3 rounds, one random die per player is locked and cannot be rerolled.",
+    "effect": "During round 1, one random die per player is locked and cannot be rerolled.",
     "params": {
-      "active_rounds": 3,
+      "active_rounds": 1,
       "locked_dice": 1
     },
     "archetype_skew": "Favors flexible builds. Hurts Combo (rigid synergies).",
@@ -88,9 +88,9 @@
   {
     "id": "COND_NIFLHEIM_CHILL",
     "display_name": "Niflheim's Chill",
-    "effect": "If your defensive dice block 4 or more attacks this round, gain 1 token.",
+    "effect": "If your defensive dice block 6 or more attacks this round, gain 1 token.",
     "params": {
-      "block_threshold": 4,
+      "block_threshold": 6,
       "bonus_tokens": 1
     },
     "archetype_skew": "Favors Control. Neutral for Economy. Hurts pure Aggro.",
@@ -99,9 +99,9 @@
   {
     "id": "COND_JOTUN_MIGHT",
     "display_name": "Jötunheim's Might",
-    "effect": "God Powers costing 8 or more cost 1 fewer token.",
+    "effect": "God Powers costing 9 or more cost 1 fewer token.",
     "params": {
-      "min_base_cost": 8,
+      "min_base_cost": 9,
       "cost_discount": 1
     },
     "archetype_skew": "Favors Combo and offensive builds. Accelerates all matches.",

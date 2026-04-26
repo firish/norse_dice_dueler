@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents import Agent, try_gp
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents import Agent
+from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores, try_view_gp
+from agents.game_aware.location_rules import gp_activation_blocked
 from agents.game_aware.gp_strategy import choose_economy_gp
 from agents.game_aware.state_features import (
     estimate_total_threat,
     opponent_has_role,
-    player_with_available_tokens,
     view_for,
 )
 from game_mechanics.game_state import GameState
@@ -45,18 +45,19 @@ class GameAwareEconomyAgent(Agent):
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
+        if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+            return None
         if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
-            player = player_with_available_tokens(view)
             threat = estimate_total_threat(view, god_powers=self._god_powers)
 
-            mjolnir = try_gp(player, self._god_powers, "GP_MJOLNIRS_WRATH", (0,))
+            mjolnir = try_view_gp(view, self._god_powers, "GP_MJOLNIRS_WRATH", (0,))
             if mjolnir is not None:
                 tier = self._god_powers["GP_MJOLNIRS_WRATH"].tiers[mjolnir[1]]
                 if view.opponent.hp <= tier.damage or threat < view.player.hp:
                     return mjolnir
 
             if opponent_has_role(view, "aggro", self._god_powers) and view.combat.incoming_total >= 2:
-                bragi = try_gp(player, self._god_powers, "GP_BRAGIS_SONG", (0,))
+                bragi = try_view_gp(view, self._god_powers, "GP_BRAGIS_SONG", (0,))
                 if bragi is not None:
                     return bragi
 
@@ -71,8 +72,8 @@ class GameAwareEconomyAgent(Agent):
                 if defensive is not None:
                     return defensive
 
-            gullveig = try_gp(player, self._god_powers, "GP_GULLVEIGS_HOARD", (0,))
-            if gullveig is not None and player.tokens < 8:
+            gullveig = try_view_gp(view, self._god_powers, "GP_GULLVEIGS_HOARD", (0,))
+            if gullveig is not None and view.available_tokens < 8:
                 return gullveig
 
             return mjolnir

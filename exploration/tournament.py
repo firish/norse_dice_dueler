@@ -1,12 +1,12 @@
-"""Generic intra-archetype tournament harness for exploration candidate pools."""
+"""Intra-archetype tournament harness for realistic exploration pools."""
 
 from __future__ import annotations
 
 import argparse
 from itertools import combinations
 
-from exploration.candidate_pools import ARCHETYPE_ORDER, get_candidate_pool
-from exploration.common import run_symmetric_matchup
+from exploration.candidate_pools import ARCHETYPE_ORDER, POOL_IDS, get_candidate_pool
+from exploration.common import run_symmetric_matchup, sample_candidate_pool
 from exploration.types import CandidateStanding, CandidatePool
 from simulator.common.cli import add_agent_mode_arg, add_games_arg, add_seed_arg
 
@@ -120,14 +120,22 @@ def print_tournament(pool: CandidatePool, standings_by_arch: dict[str, list[Cand
 def main() -> None:
     """CLI entrypoint for intra-archetype candidate tournaments."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pool", choices=("l3_core", "l3_advanced"), required=True)
-    add_agent_mode_arg(parser, default="game-aware-tier")
+    parser.add_argument("--pool", choices=POOL_IDS, required=True)
+    add_agent_mode_arg(parser, default="game-aware-tier-loadout")
     add_games_arg(parser, default=40)
     add_seed_arg(parser)
     parser.add_argument("--top", type=int, default=5, help="candidates to print per archetype")
+    parser.add_argument(
+        "--sample-per-archetype",
+        type=int,
+        default=0,
+        help="sample this many variants per archetype before the round robin (0 = use all)",
+    )
     args = parser.parse_args()
 
     pool = get_candidate_pool(args.pool, args.agent_mode)
+    if args.sample_per_archetype > 0:
+        pool = sample_candidate_pool(pool, args.sample_per_archetype, args.seed)
     standings_by_arch = run_all_tournaments(pool, args.games, args.seed)
     print_tournament(pool, standings_by_arch, args.top)
 

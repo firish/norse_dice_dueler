@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+from archetypes.common import AGENT_MODES
+
 
 def add_games_arg(
     parser: argparse.ArgumentParser,
@@ -32,7 +34,7 @@ def add_agent_mode_arg(
     """Add the shared `--agent-mode` selector to a harness parser."""
     parser.add_argument(
         "--agent-mode",
-        choices=("rule-based", "game-aware", "tier-aware", "game-aware-tier", "game-aware-tier-loadout"),
+        choices=AGENT_MODES,
         default=default,
         help="agent family to use for the archetype pilots",
     )

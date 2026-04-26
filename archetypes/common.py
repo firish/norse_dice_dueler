@@ -18,6 +18,14 @@ from agents.rule_based.aggro_agent import TierAwareAggroAgent
 from agents.rule_based.control_agent import TierAwareControlAgent
 from agents.rule_based.economy_agent import TierAwareEconomyAgent
 
+AGENT_MODES: tuple[str, ...] = (
+    "rule-based",
+    "game-aware",
+    "tier-aware",
+    "game-aware-tier",
+    "game-aware-tier-loadout",
+)
+
 
 def agent_classes(agent_mode: str = "rule-based") -> dict[str, type]:
     """Return the canonical Aggro/Control/Economy pilots for an agent family."""

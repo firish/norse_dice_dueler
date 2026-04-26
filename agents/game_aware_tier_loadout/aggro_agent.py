@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores, choice_cost
+from agents.game_aware.location_rules import gp_activation_blocked
 from agents.game_aware.gp_strategy import choose_aggro_gp
 from agents.game_aware.state_features import (
     estimate_total_threat,
     loadout_profile,
     opponent_has_role,
-    player_with_available_tokens,
     view_for,
 )
 from agents.game_aware_tier.aggro_agent import GameAwareTierAggroAgent
@@ -55,17 +55,18 @@ class GameAwareTierLoadoutAggroAgent(GameAwareTierAggroAgent):
         """Shift burst ordering based on whether the loadout is fuel-rich or race-heavy."""
         view = view_for(state, player_num)
         profile = loadout_profile(view.player)
+        if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+            return None
         if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
-            player = player_with_available_tokens(view)
             for tier_idx in (2, 1, 0):
                 choice = ("GP_FENRIRS_BITE", tier_idx)
                 tier = self._god_powers["GP_FENRIRS_BITE"].tiers[tier_idx]
-                if player.tokens >= tier.cost and tier.damage >= view.opponent.hp:
+                if choice_cost(view, self._god_powers, "GP_FENRIRS_BITE", tier_idx) <= view.available_tokens and tier.damage >= view.opponent.hp:
                     return choice
             for tier_idx in (2, 1, 0):
                 choice = ("GP_SURTRS_FLAME", tier_idx)
                 tier = self._god_powers["GP_SURTRS_FLAME"].tiers[tier_idx]
-                if player.tokens >= tier.cost and tier.damage >= view.opponent.hp:
+                if choice_cost(view, self._god_powers, "GP_SURTRS_FLAME", tier_idx) <= view.available_tokens and tier.damage >= view.opponent.hp:
                     return choice
 
             if opponent_has_role(view, "control", self._god_powers):
@@ -112,4 +113,3 @@ class GameAwareTierLoadoutAggroAgent(GameAwareTierAggroAgent):
                 minimum_score=0.2,
             )
         return choose_aggro_gp(view, self._god_powers, tier_order=(2, 1, 0), threat_tier_order=(2, 1, 0))
-

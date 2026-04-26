@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents import try_gp
 from agents.game_aware.economy_agent import GameAwareEconomyAgent
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
+from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores, choice_cost
+from agents.game_aware.location_rules import gp_activation_blocked
 from agents.game_aware.gp_strategy import choose_economy_gp
 from agents.game_aware.state_features import (
     estimate_total_threat,
     opponent_has_role,
-    player_with_available_tokens,
     view_for,
 )
 from game_mechanics.game_state import GameState
@@ -44,15 +43,16 @@ class GameAwareTierEconomyAgent(GameAwareEconomyAgent):
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
+        if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+            return None
         if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
-            player = player_with_available_tokens(view)
             threat = estimate_total_threat(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
             control_opponent = opponent_has_role(view, "control", self._god_powers)
 
             mjolnir = self._god_powers["GP_MJOLNIRS_WRATH"]
             for tier_idx in (2, 1, 0):
                 tier = mjolnir.tiers[tier_idx]
-                if player.tokens >= tier.cost and tier.damage >= view.opponent.hp:
+                if choice_cost(view, self._god_powers, "GP_MJOLNIRS_WRATH", tier_idx) <= view.available_tokens and tier.damage >= view.opponent.hp:
                     return ("GP_MJOLNIRS_WRATH", tier_idx)
 
             if opponent_has_role(view, "aggro", self._god_powers) and (view.combat.incoming_total >= 2 or threat >= view.player.hp):
@@ -89,7 +89,7 @@ class GameAwareTierEconomyAgent(GameAwareEconomyAgent):
             if mjolnir_choice is not None and threat < view.player.hp:
                 return mjolnir_choice
 
-            if player.tokens < (9 if control_opponent else 12):
+            if view.available_tokens < (9 if control_opponent else 12):
                 gullveig_choice = best_scored_gp(
                     view,
                     self._god_powers,

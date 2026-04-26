@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import numpy as np
 
 from exploration.types import Candidate, CandidatePool
@@ -70,3 +71,43 @@ def run_symmetric_matchup(
         "avg_rounds": (float(result_ab["avg_rounds"]) + float(result_ba["avg_rounds"])) / 2.0,
         "avg_winner_hp": (float(result_ab["avg_winner_hp"]) + float(result_ba["avg_winner_hp"])) / 2.0,
     }
+
+
+def sample_candidate_pool(
+    pool: CandidatePool,
+    max_per_archetype: int,
+    seed: int,
+) -> CandidatePool:
+    """Return a sampled pool, preserving approved candidates when possible."""
+    if max_per_archetype <= 0:
+        return pool
+
+    rng = random.Random(seed)
+    sampled_by_archetype: dict[str, dict[str, Candidate]] = {}
+    approved_ids: dict[str, str] = {}
+
+    for index, archetype in enumerate(ARCHETYPE_ORDER):
+        candidates = list(pool.candidates_by_archetype[archetype].values())
+        if len(candidates) <= max_per_archetype:
+            sampled = candidates
+        else:
+            approved_id = pool.approved_package_ids.get(archetype, "")
+            approved = [candidate for candidate in candidates if candidate.id == approved_id]
+            others = [candidate for candidate in candidates if candidate.id != approved_id]
+            sample_count = max_per_archetype - len(approved)
+            sampled = approved + rng.sample(others, sample_count)
+        sampled.sort(key=lambda candidate: candidate.id)
+        sampled_by_archetype[archetype] = {candidate.id: candidate for candidate in sampled}
+        approved_id = pool.approved_package_ids.get(archetype, "")
+        if approved_id in sampled_by_archetype[archetype]:
+            approved_ids[archetype] = approved_id
+
+    return CandidatePool(
+        pool_id=pool.pool_id,
+        display_name=pool.display_name,
+        grammar=pool.grammar,
+        targets=pool.targets,
+        candidates_by_archetype=sampled_by_archetype,
+        approved_package_ids=approved_ids,
+        identity_requirements=pool.identity_requirements,
+    )

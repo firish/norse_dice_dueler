@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents import Agent, try_gp
-from agents.game_aware.evaluator import choose_keep_by_scores
+from agents import Agent
+from agents.game_aware.evaluator import choose_keep_by_scores, try_view_gp
+from agents.game_aware.location_rules import gp_activation_blocked
 from agents.game_aware.gp_strategy import choose_aggro_gp
-from agents.game_aware.state_features import estimate_total_threat, player_with_available_tokens, view_for
+from agents.game_aware.state_features import estimate_total_threat, view_for
 from game_mechanics.game_state import GameState
 from game_mechanics.god_powers import load_god_powers
 
@@ -39,11 +40,12 @@ class GameAwareAggroAgent(Agent):
     def choose_god_power(self, state: GameState, player_num: int) -> tuple[str, int] | None:
         """Choose among equipped GPs, preserving the tuned canonical trio behavior."""
         view = view_for(state, player_num)
+        if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
+            return None
         if _CANONICAL_GPS.issubset(set(view.player.gp_loadout)):
-            player = player_with_available_tokens(view)
-            surtr = try_gp(player, self._god_powers, "GP_SURTRS_FLAME", (0,))
-            fenrir = try_gp(player, self._god_powers, "GP_FENRIRS_BITE", (0,))
-            tyr = try_gp(player, self._god_powers, "GP_TYRS_JUDGMENT", (0,))
+            surtr = try_view_gp(view, self._god_powers, "GP_SURTRS_FLAME", (0,))
+            fenrir = try_view_gp(view, self._god_powers, "GP_FENRIRS_BITE", (0,))
+            tyr = try_view_gp(view, self._god_powers, "GP_TYRS_JUDGMENT", (0,))
 
             if fenrir is not None and view.opponent.hp <= 4:
                 return fenrir
