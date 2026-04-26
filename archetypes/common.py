@@ -11,6 +11,9 @@ from agents.game_aware_tier.economy_agent import GameAwareTierEconomyAgent
 from agents.game_aware_tier_loadout.aggro_agent import GameAwareTierLoadoutAggroAgent
 from agents.game_aware_tier_loadout.control_agent import GameAwareTierLoadoutControlAgent
 from agents.game_aware_tier_loadout.economy_agent import GameAwareTierLoadoutEconomyAgent
+from agents.rollout.aggro_agent import RolloutAggroAgent
+from agents.rollout.control_agent import RolloutControlAgent
+from agents.rollout.economy_agent import RolloutEconomyAgent
 from agents.rule_based.aggro_agent import MatchupAwareAggroAgent
 from agents.rule_based.control_agent import MatchupAwareControlAgent
 from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
@@ -24,6 +27,7 @@ AGENT_MODES: tuple[str, ...] = (
     "tier-aware",
     "game-aware-tier",
     "game-aware-tier-loadout",
+    "rollout",
 )
 
 
@@ -58,5 +62,11 @@ def agent_classes(agent_mode: str = "rule-based") -> dict[str, type]:
             "AGGRO": GameAwareAggroAgent,
             "CONTROL": GameAwareControlAgent,
             "ECONOMY": GameAwareEconomyAgent,
+        }
+    if agent_mode == "rollout":
+        return {
+            "AGGRO": RolloutAggroAgent,
+            "CONTROL": RolloutControlAgent,
+            "ECONOMY": RolloutEconomyAgent,
         }
     raise ValueError(f"Unknown agent mode: {agent_mode}")
