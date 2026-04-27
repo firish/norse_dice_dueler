@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents.game_aware.aggro_agent import GameAwareAggroAgent
-from agents.game_aware.evaluator import choose_keep_by_scores, try_view_gp
-from agents.game_aware.location_rules import gp_activation_blocked
-from agents.game_aware.gp_strategy import choose_aggro_gp
-from agents.game_aware.state_features import (
+from agents.state_aware_agents.god_powers.gp_strategy import choose_aggro_gp
+from agents.state_aware_agents.locations.location_rules import gp_activation_blocked
+from agents.state_aware_agents.state.state_evaluator import best_scored_gp, choose_keep_by_scores, try_view_gp
+from agents.state_aware_agents.state.state_features import (
     estimate_total_threat,
     opponent_has_role,
     view_for,
 )
+from agents.state_aware_agents.state_aware.aggro_agent import GameAwareAggroAgent
 from game_mechanics.game_state import GameState
 
 _CANONICAL_GPS = frozenset({"GP_SURTRS_FLAME", "GP_FENRIRS_BITE", "GP_TYRS_JUDGMENT"})
@@ -65,8 +65,6 @@ class GameAwareTierAggroAgent(GameAwareAggroAgent):
                     return choice
 
             if opponent_has_role(view, "control", self._god_powers):
-                from agents.game_aware.evaluator import best_scored_gp
-
                 choice = best_scored_gp(
                     view,
                     self._god_powers,
@@ -79,8 +77,6 @@ class GameAwareTierAggroAgent(GameAwareAggroAgent):
                     return choice
 
             if opponent_has_role(view, "economy", self._god_powers):
-                from agents.game_aware.evaluator import best_scored_gp
-
                 choice = best_scored_gp(
                     view,
                     self._god_powers,
@@ -91,8 +87,6 @@ class GameAwareTierAggroAgent(GameAwareAggroAgent):
                 )
                 if choice is not None:
                     return choice
-
-            from agents.game_aware.evaluator import best_scored_gp
 
             return best_scored_gp(
                 view,

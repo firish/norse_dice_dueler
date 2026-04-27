@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores
-from agents.game_aware.gp_loadout import minimum_tier_cost
-from agents.game_aware.location_rules import gp_activation_blocked
-from agents.game_aware.gp_strategy import choose_control_gp
-from agents.game_aware.state_features import (
+from agents.state_aware_agents.state.state_evaluator import best_scored_gp, choose_keep_by_scores
+from agents.state_aware_agents.god_powers.gp_scoring import (
+    EXTREME_GP_THREAT_SCORE,
+    HIGH_GP_THREAT_SCORE,
+    MEANINGFUL_GP_THREAT_SCORE,
+)
+from agents.state_aware_agents.god_powers.gp_loadout import minimum_tier_cost
+from agents.state_aware_agents.locations.location_rules import gp_activation_blocked
+from agents.state_aware_agents.god_powers.gp_strategy import choose_control_gp
+from agents.state_aware_agents.state.state_features import (
     banked_tokens_for_player,
     estimate_opponent_gp_damage,
     estimate_opponent_gp_value,
@@ -17,7 +22,7 @@ from agents.game_aware.state_features import (
     opponent_has_role,
     view_for,
 )
-from agents.game_aware_tier.control_agent import GameAwareTierControlAgent
+from agents.state_aware_agents.state_tier_aware.control_agent import GameAwareTierControlAgent
 from game_mechanics.game_state import GameState
 
 _CANONICAL_GPS = frozenset({"GP_AEGIS_OF_BALDR", "GP_EIRS_MERCY", "GP_TYRS_JUDGMENT"})
@@ -71,7 +76,7 @@ class GameAwareTierLoadoutControlAgent(GameAwareTierControlAgent):
             incoming_gp_value = estimate_opponent_gp_value(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
             threat = estimate_total_threat(view, tier_order=(2, 1, 0), god_powers=self._god_powers)
             if opponent_has_role(view, "economy", self._god_powers):
-                if incoming_gp_value >= 5.5 and "GP_FRIGGS_VEIL" in view.player.gp_loadout:
+                if incoming_gp_value >= HIGH_GP_THREAT_SCORE and "GP_FRIGGS_VEIL" in view.player.gp_loadout:
                     choice = best_scored_gp(
                         view,
                         self._god_powers,
@@ -87,7 +92,12 @@ class GameAwareTierLoadoutControlAgent(GameAwareTierControlAgent):
                     if profile.attack_support and threat < view.player.hp - 2
                     else ("GP_AEGIS_OF_BALDR", "GP_TYRS_JUDGMENT", "GP_EIRS_MERCY")
                 )
-                if incoming_gp > 0 or incoming_gp_value >= 4.0 or profile.fuel_rich or profile.light_defense:
+                if (
+                    incoming_gp > 0
+                    or incoming_gp_value >= MEANINGFUL_GP_THREAT_SCORE
+                    or profile.fuel_rich
+                    or profile.light_defense
+                ):
                     choice = best_scored_gp(
                         view,
                         self._god_powers,
@@ -123,7 +133,7 @@ class GameAwareTierLoadoutControlAgent(GameAwareTierControlAgent):
 
             if "GP_FRIGGS_VEIL" in equipped:
                 frigg_cost = minimum_tier_cost(("GP_FRIGGS_VEIL",), self._god_powers)
-                if opp_available >= 8 or incoming_gp_value >= 6.0:
+                if opp_available >= 8 or incoming_gp_value >= EXTREME_GP_THREAT_SCORE:
                     choice = best_scored_gp(
                         view,
                         self._god_powers,

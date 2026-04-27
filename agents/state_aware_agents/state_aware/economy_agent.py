@@ -5,10 +5,10 @@ from __future__ import annotations
 import numpy as np
 
 from agents import Agent
-from agents.game_aware.evaluator import best_scored_gp, choose_keep_by_scores, try_view_gp
-from agents.game_aware.location_rules import gp_activation_blocked
-from agents.game_aware.gp_strategy import choose_economy_gp
-from agents.game_aware.state_features import (
+from agents.state_aware_agents.god_powers.gp_strategy import choose_economy_gp
+from agents.state_aware_agents.locations.location_rules import gp_activation_blocked
+from agents.state_aware_agents.state.state_evaluator import best_scored_gp, choose_keep_by_scores, try_view_gp
+from agents.state_aware_agents.state.state_features import (
     estimate_total_threat,
     opponent_has_role,
     view_for,

@@ -4,9 +4,32 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 
-from agents.game_aware.location_bias import adjust_keep_scores, choice_location_bonus
-from agents.game_aware.location_rules import effective_gp_cost, gp_activation_blocked
-from agents.game_aware.state_features import AgentView, estimate_opponent_gp_damage, estimate_opponent_gp_value
+from agents.state_aware_agents.god_powers.gp_scoring import (
+    GP_BLOCK_LETHAL_URGENCY_BONUS,
+    GP_CANCEL_DIRECT_THREAT_BONUS,
+    GP_CANCEL_NO_TARGET_PENALTY,
+    GP_CANCEL_THREAT_BONUS_CAP,
+    GP_CANCEL_THREAT_BONUS_MULTIPLIER,
+    GP_CANCEL_TOKEN_PRESENCE_VALUE,
+    GP_CANCEL_TOKEN_WINDOW_CAP,
+    GP_COST_POINT_PENALTY,
+    GP_DAMAGE_REDUCTION_LETHAL_URGENCY_BONUS,
+    GP_HEAL_LOW_HP_URGENCY_BONUS,
+    GP_HIGHER_TIER_PENALTY,
+    GP_LOW_HP_URGENCY_THRESHOLD,
+    GP_REFLECT_POINT_VALUE,
+    GP_SELF_DAMAGE_LOW_HP_PENALTY,
+    GP_SELF_DAMAGE_POINT_PENALTY,
+    GP_TOKEN_UNDER_PRESSURE_COST_PENALTY,
+    GP_UNUSED_BLOCK_PENALTY,
+    GP_UNUSED_DAMAGE_REDUCTION_PENALTY,
+    GP_UNUSED_HEAL_PENALTY,
+    GP_WASTED_DAMAGE_PENALTY,
+    score_tier_core_impact,
+)
+from agents.state_aware_agents.locations.location_bias import adjust_keep_scores, choice_location_bonus
+from agents.state_aware_agents.locations.location_rules import effective_gp_cost, gp_activation_blocked
+from agents.state_aware_agents.state.state_features import AgentView, estimate_opponent_gp_damage, estimate_opponent_gp_value
 from game_mechanics.god_powers import GodPower
 
 
@@ -87,9 +110,10 @@ def score_gp_choice(
 ) -> float:
     """Score one GP/tier choice from visible tactical context."""
     gp_id, tier_idx = choice
-    tier = god_powers[gp_id].tiers[tier_idx]
+    gp = god_powers[gp_id]
+    tier = gp.tiers[tier_idx]
     effective_cost = choice_cost(view, god_powers, gp_id, tier_idx)
-    cost_penalty = effective_cost * 0.22
+    cost_penalty = effective_cost * GP_COST_POINT_PENALTY
     missing_hp = view.missing_hp
     incoming_dice = view.combat.incoming_total
     incoming_gp = estimate_opponent_gp_damage(
@@ -104,55 +128,61 @@ def score_gp_choice(
     )
 
     score = -cost_penalty
-    score -= tier_idx * 0.35
+    score -= tier_idx * GP_HIGHER_TIER_PENALTY
+    score += score_tier_core_impact(
+        tier,
+        primary_role=gp.primary_role,
+        effective_cost=effective_cost,
+        target_hp=view.opponent.hp,
+        missing_hp=missing_hp,
+        preventable_block_damage=incoming_gp,
+        preventable_reduction_damage=incoming_dice,
+        cancel_target_available=incoming_gp_value > 0,
+        inactive_cancel_value=0.0,
+    )
 
     if tier.damage:
-        effective_damage = min(float(tier.damage), float(view.opponent.hp))
         wasted_damage = max(0.0, float(tier.damage) - float(view.opponent.hp))
-        score += effective_damage * 2.3
-        score -= wasted_damage * 0.7
-        if view.opponent.hp <= tier.damage:
-            score += 8.0
+        score -= wasted_damage * GP_WASTED_DAMAGE_PENALTY
 
     if tier.self_damage:
-        score -= tier.self_damage * (2.0 if view.player.hp <= 5 else 1.0)
+        score -= tier.self_damage * (
+            GP_SELF_DAMAGE_LOW_HP_PENALTY
+            if view.player.hp <= GP_LOW_HP_URGENCY_THRESHOLD
+            else GP_SELF_DAMAGE_POINT_PENALTY
+        )
 
     if tier.block_amount:
         prevented = min(tier.block_amount, incoming_gp)
-        score += prevented * 2.4
-        score -= max(0, tier.block_amount - prevented) * 0.5
+        score -= max(0, tier.block_amount - prevented) * GP_UNUSED_BLOCK_PENALTY
         if incoming_gp >= view.player.hp:
-            score += prevented * 2.0
+            score += prevented * GP_BLOCK_LETHAL_URGENCY_BONUS
 
     if tier.heal:
         healed = min(tier.heal, missing_hp)
-        score += healed * 1.9
-        score -= max(0, tier.heal - healed) * 0.4
-        if view.player.hp <= 5:
-            score += healed * 1.2
+        score -= max(0, tier.heal - healed) * GP_UNUSED_HEAL_PENALTY
+        if view.player.hp <= GP_LOW_HP_URGENCY_THRESHOLD:
+            score += healed * GP_HEAL_LOW_HP_URGENCY_BONUS
 
     if tier.token_gain:
-        score += max(0, tier.token_gain - tier.cost) * 1.6
-        score += min(tier.token_gain, 4) * 0.25
         if incoming_dice + incoming_gp >= view.player.hp:
-            score -= tier.cost * 0.25
+            score -= effective_cost * GP_TOKEN_UNDER_PRESSURE_COST_PENALTY
 
     if tier.damage_reduction:
         prevented = min(tier.damage_reduction, incoming_dice)
-        score += prevented * 2.5
-        score += round(prevented * tier.reflect_pct) * 1.8
-        score -= max(0, tier.damage_reduction - prevented) * 0.35
+        score += round(prevented * tier.reflect_pct) * GP_REFLECT_POINT_VALUE
+        score -= max(0, tier.damage_reduction - prevented) * GP_UNUSED_DAMAGE_REDUCTION_PENALTY
         if incoming_dice >= view.player.hp:
-            score += prevented * 2.0
+            score += prevented * GP_DAMAGE_REDUCTION_LETHAL_URGENCY_BONUS
 
     if tier.cancel_gp:
         if incoming_gp_value > 0:
-            score += 2.0 + min(incoming_gp_value, 8.0) * 0.75
+            score += min(incoming_gp_value, GP_CANCEL_THREAT_BONUS_CAP) * GP_CANCEL_THREAT_BONUS_MULTIPLIER
         else:
-            score -= 1.5
+            score -= GP_CANCEL_NO_TARGET_PENALTY
         if incoming_gp > 0:
-            score += 2.0
-        score += min(view.opponent.tokens, 8) * 0.25
+            score += GP_CANCEL_DIRECT_THREAT_BONUS
+        score += min(view.opponent.tokens, GP_CANCEL_TOKEN_WINDOW_CAP) * GP_CANCEL_TOKEN_PRESENCE_VALUE
 
     score += choice_location_bonus(view, god_powers, choice)
     return score

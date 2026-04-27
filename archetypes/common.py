@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-from agents.game_aware.aggro_agent import GameAwareAggroAgent
-from agents.game_aware.control_agent import GameAwareControlAgent
-from agents.game_aware.economy_agent import GameAwareEconomyAgent
-from agents.game_aware_tier.aggro_agent import GameAwareTierAggroAgent
-from agents.game_aware_tier.control_agent import GameAwareTierControlAgent
-from agents.game_aware_tier.economy_agent import GameAwareTierEconomyAgent
-from agents.game_aware_tier_loadout.aggro_agent import GameAwareTierLoadoutAggroAgent
-from agents.game_aware_tier_loadout.control_agent import GameAwareTierLoadoutControlAgent
-from agents.game_aware_tier_loadout.economy_agent import GameAwareTierLoadoutEconomyAgent
-from agents.rule_based.aggro_agent import MatchupAwareAggroAgent
-from agents.rule_based.control_agent import MatchupAwareControlAgent
-from agents.rule_based.economy_agent import MatchupAwareEconomyAgent
-from agents.rule_based.aggro_agent import TierAwareAggroAgent
-from agents.rule_based.control_agent import TierAwareControlAgent
-from agents.rule_based.economy_agent import TierAwareEconomyAgent
+from agents.static_agents.aggro_agent import MatchupAwareAggroAgent, TierAwareAggroAgent
+from agents.static_agents.control_agent import MatchupAwareControlAgent, TierAwareControlAgent
+from agents.static_agents.economy_agent import MatchupAwareEconomyAgent, TierAwareEconomyAgent
+from agents.state_aware_agents.state_aware.aggro_agent import GameAwareAggroAgent
+from agents.state_aware_agents.state_aware.control_agent import GameAwareControlAgent
+from agents.state_aware_agents.state_aware.economy_agent import GameAwareEconomyAgent
+from agents.state_aware_agents.state_tier_aware.aggro_agent import GameAwareTierAggroAgent
+from agents.state_aware_agents.state_tier_aware.control_agent import GameAwareTierControlAgent
+from agents.state_aware_agents.state_tier_aware.economy_agent import GameAwareTierEconomyAgent
+from agents.state_aware_agents.state_tier_loadout_aware.aggro_agent import GameAwareTierLoadoutAggroAgent
+from agents.state_aware_agents.state_tier_loadout_aware.control_agent import GameAwareTierLoadoutControlAgent
+from agents.state_aware_agents.state_tier_loadout_aware.economy_agent import GameAwareTierLoadoutEconomyAgent
 
 AGENT_MODES: tuple[str, ...] = (
     "rule-based",

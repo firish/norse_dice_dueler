@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from agents.game_aware.gp_loadout import infer_archetype_from_gp_loadout
-from agents.game_aware.location_rules import effective_gp_cost, gp_activation_blocked
-from agents.game_aware.loadout_profile import LoadoutProfile, profile_for_loadout
+from agents.state_aware_agents.god_powers.gp_scoring import score_tier_core_impact
+from agents.state_aware_agents.god_powers.gp_loadout import infer_archetype_from_gp_loadout
+from agents.state_aware_agents.locations.location_rules import effective_gp_cost, gp_activation_blocked
+from agents.state_aware_agents.dice_deck.loadout_profile import LoadoutProfile, profile_for_loadout
 from game_mechanics.conditions import condition_param
 from game_mechanics.game_state import GameState, PlayerState
 from game_mechanics.god_powers import GodPower, load_god_powers
@@ -171,7 +172,7 @@ def estimate_opponent_gp_value(
     tier_order: tuple[int, ...] = (0,),
     god_powers: dict[str, GodPower] | None = None,
 ) -> float:
-    """Estimate the opponent's best affordable GP impact, not just raw damage."""
+    """Estimate the opponent's best affordable GP impact on the shared GP score scale."""
     if gp_activation_blocked(view.state.round_num, view.state.condition_ids):
         return 0.0
     tokens = view.opponent.tokens + banked_tokens_for_player(view.state, view.opponent)
@@ -193,29 +194,16 @@ def estimate_opponent_gp_value(
             if tokens < effective_cost:
                 continue
 
-            score = 0.0
-            if tier.damage:
-                score += min(float(tier.damage), float(view.player.hp)) * 2.2
-                if tier.damage >= view.player.hp:
-                    score += 4.0
-            if tier.token_gain:
-                score += max(0, tier.token_gain - effective_cost) * 2.2
-                score += min(tier.token_gain, 4) * 0.4
-            if tier.block_amount:
-                score += min(tier.block_amount, view.combat.outgoing_total) * 1.2
-            if tier.damage_reduction:
-                score += min(tier.damage_reduction, view.combat.outgoing_total) * 1.4
-            if tier.heal:
-                score += min(tier.heal, opponent_missing_hp) * 1.6
-            if tier.cancel_gp:
-                score += 3.0 if view.available_tokens > 0 else 1.0
-            if gp.primary_role == "ramp":
-                score += 0.8
-            elif gp.primary_role == "finisher":
-                score += 0.5
-            elif gp.primary_role == "counter":
-                score += 0.4
-
+            score = score_tier_core_impact(
+                tier,
+                primary_role=gp.primary_role,
+                effective_cost=effective_cost,
+                target_hp=view.player.hp,
+                missing_hp=opponent_missing_hp,
+                preventable_block_damage=view.combat.outgoing_total,
+                preventable_reduction_damage=view.combat.outgoing_total,
+                cancel_target_available=view.available_tokens > 0,
+            )
             best = max(best, score)
             break
 

@@ -14,6 +14,15 @@ from game_mechanics.die_types import DieType, load_die_types
 _DIE_TYPES = load_die_types()
 _FACES_PER_DIE = 6.0
 
+# Loadout-profile thresholds and weights.
+# These values define how raw expected face counts collapse into higher-level
+# tags like "fuel rich" or "heavy defense".
+GP_FUEL_HAND_WEIGHT = 0.45
+ATTACK_SUPPORT_THRESHOLD = 2.0
+FUEL_RICH_THRESHOLD = 1.25
+LIGHT_DEFENSE_THRESHOLD = 1.9
+HEAVY_DEFENSE_THRESHOLD = 2.3
+
 
 @dataclass(frozen=True)
 class LoadoutProfile:
@@ -47,7 +56,7 @@ class LoadoutProfile:
 
     @property
     def gp_fuel(self) -> float:
-        return self.expected_bordered_hands + (0.45 * self.expected_hands)
+        return self.expected_bordered_hands + (GP_FUEL_HAND_WEIGHT * self.expected_hands)
 
     @property
     def offense_bias(self) -> float:
@@ -59,19 +68,19 @@ class LoadoutProfile:
 
     @property
     def attack_support(self) -> bool:
-        return self.expected_attack >= 2.0
+        return self.expected_attack >= ATTACK_SUPPORT_THRESHOLD
 
     @property
     def fuel_rich(self) -> bool:
-        return self.gp_fuel >= 1.25
+        return self.gp_fuel >= FUEL_RICH_THRESHOLD
 
     @property
     def light_defense(self) -> bool:
-        return self.expected_block < 1.9
+        return self.expected_block < LIGHT_DEFENSE_THRESHOLD
 
     @property
     def heavy_defense(self) -> bool:
-        return self.expected_block >= 2.3
+        return self.expected_block >= HEAVY_DEFENSE_THRESHOLD
 
 
 def _expected_face_count(die_types: tuple[DieType, ...], face_id: str) -> float:

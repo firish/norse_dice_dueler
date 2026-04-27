@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from agents.game_aware.evaluator import best_scored_gp
-from agents.game_aware.gp_loadout import (
+from agents.state_aware_agents.state.state_evaluator import best_scored_gp
+from agents.state_aware_agents.god_powers.gp_scoring import MEANINGFUL_GP_THREAT_SCORE
+from agents.state_aware_agents.god_powers.gp_loadout import (
     equipped_gp_ids,
     equipped_gp_ids_matching,
     merge_gp_priority_groups,
-    minimum_tier_cost,
 )
-from agents.game_aware.state_features import (
+from agents.state_aware_agents.state.state_features import (
     AgentView,
     estimate_opponent_gp_damage,
     estimate_opponent_gp_value,
@@ -19,6 +19,21 @@ from agents.game_aware.state_features import (
     opponent_has_role,
 )
 from game_mechanics.god_powers import GodPower
+
+# Strategy policy thresholds.
+# These are intentionally separate from `gp_scoring.py`, which defines the
+# shared GP effect score scale rather than agent decision policy.
+FORCE_CHOICE_SCORE_FLOOR = -999.0
+SPECULATIVE_CHOICE_SCORE_FLOOR = -0.1
+LOW_CONFIDENCE_CHOICE_SCORE_FLOOR = 0.1
+DEFAULT_CHOICE_SCORE_FLOOR = 0.2
+PRESSURED_RACE_CHOICE_SCORE_FLOOR = 0.4
+
+COUNTER_TOKEN_THREAT_THRESHOLD = 5
+PROACTIVE_CONTROL_MIN_SAFE_HP = 5
+AGGRO_PRESSURE_INCOMING_DAMAGE_THRESHOLD = 2
+RAMP_TOKEN_THRESHOLD_VS_CONTROL = 9
+RAMP_TOKEN_THRESHOLD_DEFAULT = 12
 
 
 def _role_groups(view: AgentView, god_powers: Mapping[str, GodPower]) -> dict[str, tuple[str, ...]]:
@@ -103,7 +118,7 @@ def choose_aggro_gp(
         lethal_priority,
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
-        minimum_score=-999.0,
+        minimum_score=FORCE_CHOICE_SCORE_FLOOR,
         choice_filter=_lethal_filter(view, god_powers),
     )
     if lethal is not None:
@@ -116,7 +131,7 @@ def choose_aggro_gp(
             merge_gp_priority_groups(groups["finisher"], groups["hybrid"], groups["burst"], groups["all"]),
             tier_order=tier_order,
             threat_tier_order=threat_tier_order,
-            minimum_score=0.1,
+            minimum_score=LOW_CONFIDENCE_CHOICE_SCORE_FLOOR,
         )
         if choice is not None:
             return choice
@@ -128,7 +143,7 @@ def choose_aggro_gp(
             merge_gp_priority_groups(groups["finisher"], groups["burst"], groups["hybrid"], groups["all"]),
             tier_order=tier_order,
             threat_tier_order=threat_tier_order,
-            minimum_score=0.1,
+            minimum_score=LOW_CONFIDENCE_CHOICE_SCORE_FLOOR,
         )
         if choice is not None:
             return choice
@@ -139,7 +154,7 @@ def choose_aggro_gp(
         merge_gp_priority_groups(groups["burst"], groups["finisher"], groups["hybrid"], groups["all"]),
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
-        minimum_score=0.2,
+        minimum_score=DEFAULT_CHOICE_SCORE_FLOOR,
     )
 
 
@@ -157,36 +172,39 @@ def choose_control_gp(
     threat = estimate_total_threat(view, tier_order=threat_tier_order, god_powers=dict(god_powers))
 
     if opponent_has_role(view, "economy", dict(god_powers)):
-        if (incoming_gp_value >= 4.0 or view.opponent.tokens >= 5) and groups["counter"]:
+        if (
+            incoming_gp_value >= MEANINGFUL_GP_THREAT_SCORE
+            or view.opponent.tokens >= COUNTER_TOKEN_THREAT_THRESHOLD
+        ) and groups["counter"]:
             counter = best_scored_gp(
                 view,
                 god_powers,
                 merge_gp_priority_groups(groups["counter"], groups["all"]),
                 tier_order=tier_order,
                 threat_tier_order=threat_tier_order,
-                minimum_score=-0.1,
+                minimum_score=SPECULATIVE_CHOICE_SCORE_FLOOR,
             )
             if counter is not None:
                 return counter
-        if threat < max(5, view.player.hp):
+        if threat < max(PROACTIVE_CONTROL_MIN_SAFE_HP, view.player.hp):
             proactive = best_scored_gp(
                 view,
                 god_powers,
                 merge_gp_priority_groups(groups["counter"], groups["hybrid"], groups["anti_race"], groups["all"]),
                 tier_order=tier_order,
                 threat_tier_order=threat_tier_order,
-                minimum_score=-999.0,
+                minimum_score=FORCE_CHOICE_SCORE_FLOOR,
             )
             if proactive is not None:
                 return proactive
-        if incoming_gp > 0 or incoming_gp_value >= 4.0:
+        if incoming_gp > 0 or incoming_gp_value >= MEANINGFUL_GP_THREAT_SCORE:
             direct_answer = best_scored_gp(
                 view,
                 god_powers,
                 merge_gp_priority_groups(groups["counter"], groups["hybrid"], groups["anti_race"], groups["block"], groups["heal"], groups["all"]),
                 tier_order=tier_order,
                 threat_tier_order=threat_tier_order,
-                minimum_score=0.2,
+                minimum_score=DEFAULT_CHOICE_SCORE_FLOOR,
             )
             if direct_answer is not None:
                 return direct_answer
@@ -197,7 +215,7 @@ def choose_control_gp(
         merge_gp_priority_groups(groups["block"], groups["heal"], groups["anti_race"], groups["hybrid"], groups["all"]),
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
-        minimum_score=0.2,
+        minimum_score=DEFAULT_CHOICE_SCORE_FLOOR,
     )
 
 
@@ -217,7 +235,7 @@ def choose_economy_gp(
         offensive_priority,
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
-        minimum_score=-999.0,
+        minimum_score=FORCE_CHOICE_SCORE_FLOOR,
         choice_filter=_lethal_filter(view, god_powers),
     )
     if lethal is not None:
@@ -225,7 +243,7 @@ def choose_economy_gp(
 
     threat = estimate_total_threat(view, tier_order=threat_tier_order, god_powers=dict(god_powers))
     if opponent_has_role(view, "aggro", dict(god_powers)) and (
-        view.combat.incoming_total >= 2 or threat >= view.player.hp
+        view.combat.incoming_total >= AGGRO_PRESSURE_INCOMING_DAMAGE_THRESHOLD or threat >= view.player.hp
     ):
         anti_race = best_scored_gp(
             view,
@@ -233,7 +251,7 @@ def choose_economy_gp(
             merge_gp_priority_groups(groups["anti_race"], groups["block"], groups["heal"], groups["all"]),
             tier_order=tier_order,
             threat_tier_order=threat_tier_order,
-            minimum_score=0.1,
+            minimum_score=LOW_CONFIDENCE_CHOICE_SCORE_FLOOR,
         )
         if anti_race is not None:
             return anti_race
@@ -244,7 +262,7 @@ def choose_economy_gp(
             merge_gp_priority_groups(groups["finisher"], groups["all"]),
             tier_order=tier_order,
             threat_tier_order=threat_tier_order,
-            minimum_score=0.4,
+            minimum_score=PRESSURED_RACE_CHOICE_SCORE_FLOOR,
         )
         if race_answer is not None:
             return race_answer
@@ -255,16 +273,16 @@ def choose_economy_gp(
         merge_gp_priority_groups(groups["finisher"], groups["all"]),
         tier_order=tier_order,
         threat_tier_order=threat_tier_order,
-        minimum_score=0.2,
+        minimum_score=DEFAULT_CHOICE_SCORE_FLOOR,
     )
     if cashout is not None and threat < view.player.hp:
         return cashout
 
     if opponent_has_role(view, "control", dict(god_powers)):
-        ramp_threshold = 9
+        ramp_threshold = RAMP_TOKEN_THRESHOLD_VS_CONTROL
         ramp_tier_order = tuple(idx for idx in tier_order if idx in (1, 0)) or tier_order
     else:
-        ramp_threshold = 12
+        ramp_threshold = RAMP_TOKEN_THRESHOLD_DEFAULT
         ramp_tier_order = tier_order
     if view.player.tokens < ramp_threshold:
         ramp = best_scored_gp(
@@ -273,7 +291,7 @@ def choose_economy_gp(
             merge_gp_priority_groups(groups["ramp"], groups["all"]),
             tier_order=ramp_tier_order,
             threat_tier_order=threat_tier_order,
-            minimum_score=0.2,
+            minimum_score=DEFAULT_CHOICE_SCORE_FLOOR,
         )
         if ramp is not None:
             return ramp
